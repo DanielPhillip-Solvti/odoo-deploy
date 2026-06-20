@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_vm_user,access_vm_user,model_deploy_vm,base.group_user,1,0,0,0
+access_vm_admin,access_vm_admin,model_deploy_vm,base.group_system,1,1,1,1
+access_env_user,access_env_user,model_deploy_environment,base.group_user,1,0,0,0
+access_env_admin,access_env_admin,model_deploy_environment,base.group_system,1,1,1,1
+access_github_token_user,access_github_token_user,model_deploy_github_token,base.group_user,1,1,1,1

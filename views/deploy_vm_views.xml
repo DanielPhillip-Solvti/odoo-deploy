@@ -1,0 +1,26 @@
+<odoo>
+    <record id="deploy_vm_form_view" model="ir.ui.view">
+        <field name="name">deploy.vm.form</field>
+        <field name="model">deploy.vm</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                   <button name="check_health" type="object" string="Check Health" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="url"/>
+                        <field name="otp"/>
+                        <field name="repository_url"/>
+                    </group>
+                    <notebook>
+                        <page string="Environments">
+                            <field name="environment_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
