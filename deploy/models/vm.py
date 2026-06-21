@@ -38,13 +38,4 @@ class VM(models.Model):
         return super().create(vals_list)
     
     def check_health(self):
-        result = AgentService().check_health(self)
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'type': 'success',
-                'message': result.get('output', result),
-                'next': {'type': 'ir.actions.act_window_close'},
-            }
-        }
+        return AgentService().check_health(self)

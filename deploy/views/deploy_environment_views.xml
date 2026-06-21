@@ -1,4 +1,17 @@
 <odoo>
+    <!-- list view -->
+    <record id="deploy_environment_tree_view" model="ir.ui.view">
+        <field name="name">deploy.environment.tree</field>
+        <field name="model">deploy.environment</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="repository_branch"/>
+                <field name="odoo_version"/>
+                <field name="is_production"/>
+            </list>
+        </field>
+    </record>
+
     <record id="deploy_environment_form_view" model="ir.ui.view">
         <field name="name">deploy.environment.form</field>
         <field name="model">deploy.environment</field>

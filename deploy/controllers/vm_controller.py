@@ -3,7 +3,7 @@ from odoo.exceptions import UserError
 from odoo.http import request, Response
 
 class VMController(http.Controller):
-    @http.route('/register_agent', type='json', auth='public')
+    @http.route('/register_agent', type='jsonrpc', auth='public')
     def register_agent(self, **kwargs):
         vm_id = kwargs.get('vm_id', False)
         otp = kwargs.get('otp', False)

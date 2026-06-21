@@ -10,7 +10,17 @@ _ENDPOINTS = {
 import requests
 
 class AgentService:
-    def _request(self, agent_url, endpoint, **kwargs):
+    def _notify(self, message):
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'message': message,
+                'type': 'info',
+            },
+        }
+
+    def _request(self, agent_url, endpoint, return_notification=True, **kwargs):
         endpoint_info = _ENDPOINTS.get(endpoint)
 
         if not endpoint_info:
@@ -28,6 +38,9 @@ class AgentService:
 
         if response.status_code != 200:
             raise Exception(f"Agent service error: {response.status_code} - {response.text}")
+        
+        if return_notification:
+            return self._notify(response.json()['output'])
         
         return response.json()
 
@@ -47,7 +60,12 @@ class AgentService:
         return self._request(environment_record.url, 'undeploy', branch=environment_record.repository_branch)
 
     def deploy(self, environment_record):
-        return self._request(environment_record.url, 'deploy', branch=environment_record.repository_branch)
+        return self._request(environment_record.url, 'deploy', 
+            branch=environment_record.repository_branch, 
+            addons_repository=environment_record.repository_url, 
+            odoo_version=environment_record.odoo_version,
+            is_production=environment_record.is_production
+        )
 
     
 
