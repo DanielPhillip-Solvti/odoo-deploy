@@ -1,5 +1,5 @@
 from odoo import models, fields, api
-from .agent_service import AgentService
+from ..services.agent_service import AgentService
 import random
 import string
 
