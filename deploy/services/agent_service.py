@@ -2,11 +2,11 @@ import requests
 
 _ENDPOINTS = {
     'check_health': {'route': '/health', 'method': 'GET'},
-    'backup': {'route': '/backup', 'method': 'POST', 'required_fields': ['branch']},
+    'backup': {'route': '/backup', 'method': 'POST', 'required_fields': ['branch','with_dump']},
     'deploy': {'route': '/deploy', 'method': 'POST', 'required_fields': ['branch', 'github_token']},
     'download_dump': {'route': '/dump', 'method': 'GET', 'required_fields': ['is_production']},
     'reset_branch': {'route': '/reset_branch', 'method': 'POST', 'required_fields': ['branch', 'github_token']},
-    'restore_backup': {'route': '/restore_backup', 'method': 'POST', 'required_fields': ['branch']},
+    'restore_backup': {'route': '/restore_backup', 'method': 'POST', 'required_fields': ['branch', 'is_production']},
     'stream_logs': {'route': '/logs', 'method': 'GET', 'required_fields': ['branch']},
     'undeploy': {'route': '/undeploy', 'method': 'POST', 'required_fields': ['branch']},
     'update_module': {'route': '/update_module', 'method': 'POST', 'required_fields': ['branch']},
@@ -70,8 +70,8 @@ class AgentService:
     def check_health(self, vm_record):
         return self._request(vm_record.url, 'check_health')
     
-    def backup(self, environment_record):
-        return self._request(environment_record.url, 'backup', branch=environment_record.repository_branch)
+    def backup(self, vm_record, with_dump=False):
+        return self._request(vm_record.url, 'backup', with_dump=with_dump)
 
     def deploy(self, environment_record):
         token = self._get_active_token(environment_record.env)
@@ -84,8 +84,8 @@ class AgentService:
             github_token=token
         )
 
-    def download_dump(self, environment_record):
-        return self._request(environment_record.url, 'download_dump', is_production=environment_record.is_production, return_notification=False)
+    def download_dump(self, vm_record, production):
+        return self._request(vm_record.url, 'download_dump', is_production=production, return_notification=False)
 
     def reset_branch(self, environment_record):
         token = self._get_active_token(environment_record.env)
@@ -96,7 +96,7 @@ class AgentService:
         )
 
     def restore_backup(self, environment_record):
-        return self._request(environment_record.url, 'restore_backup', branch=environment_record.repository_branch)
+        return self._request(environment_record.url, 'restore_backup', branch=environment_record.repository_branch, is_production=environment_record.is_production)
 
     def stream_logs(self, environment_record):
         return self._request(environment_record.url, 'stream_logs', branch=environment_record.repository_branch, return_notification=False)

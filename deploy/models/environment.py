@@ -21,8 +21,11 @@ class Environment(models.Model):
     vm_id = fields.Many2one('deploy.vm', required=True, ondelete='cascade')
     repository_url = fields.Char(related='vm_id.repository_url')
 
-    def reset_repository(self):
-        return AgentService().reset_repository(self)
+    def deploy(self):
+        return AgentService().deploy(self)
+    
+    def reset_branch(self):
+        return AgentService().reset_branch(self)
 
     def restart_odoo(self):
         return AgentService().restart_odoo(self)
@@ -32,9 +35,6 @@ class Environment(models.Model):
 
     def undeploy(self):
         return AgentService().undeploy(self)
-
-    def deploy(self):
-        return AgentService().deploy(self)
 
     def get_github_commits(self):
         self.ensure_one()        

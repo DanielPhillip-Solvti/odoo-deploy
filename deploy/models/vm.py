@@ -39,3 +39,22 @@ class VM(models.Model):
     
     def check_health(self):
         return AgentService().check_health(self)
+
+    def backup(self, with_dump=False):
+        return AgentService().backup(self, with_dump=with_dump)
+    
+    def download_dump(self, production):
+        return AgentService().download_dump(self, production=production)
+
+    # buttons
+    def backup_no_dump(self):
+        return self.backup(with_dump=False)
+
+    def backup_with_dump(self):
+        return self.backup(with_dump=True)
+
+    def download_production_dump(self):
+        return self.download_dump(production=True)
+
+    def download_neutralised_dump(self):
+        return self.download_dump(production=False)
