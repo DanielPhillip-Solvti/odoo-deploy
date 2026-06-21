@@ -54,16 +54,6 @@ export class GithubCommitHistory extends Component {
         }
     }
 
-    loginWithGithub() {
-        const redirectUrl = window.location.href;
-        window.location.href = `/deploy/github/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
-    }
-
-    disconnect() {
-        const redirectUrl = window.location.href;
-        window.location.href = `/deploy/github/disconnect?redirect_url=${encodeURIComponent(redirectUrl)}`;
-    }
-
     async reload() {
         await this._loadCommits();
     }

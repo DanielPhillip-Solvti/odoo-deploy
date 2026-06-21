@@ -36,12 +36,15 @@ class Environment(models.Model):
         return AgentService().deploy(self)
 
     def get_github_commits(self):
-        """Fetch recent commits for this environment's repository branch via GitHub API."""
+        """Fetch recent commits for this environment's repository branch via GitHub App Installation Token."""
         self.ensure_one()
-        token = self.env['deploy.github.token'].get_token_for_current_user()
-        if not token:
-            return {'error': 'not_authenticated'}
+        
+        # 1. Fetch the GitHub App Configuration
+        gh_config = self.env['github.app.config'].search([], limit=1)
+        if not gh_config:
+            return {'error': 'github_app_not_configured'}
 
+        # 2. Extract owner and repo using your regex
         repo_url = self.repository_url or ''
         match = re.search(r'github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?$', repo_url)
         if not match:
@@ -50,6 +53,14 @@ class Environment(models.Model):
         owner, repo = match.group(1), match.group(2)
         branch = self.repository_branch or 'main'
 
+        # 3. Request a short-lived system token using your GitHub App credentials
+        try:
+            token = gh_config._get_installation_token()
+        except Exception as exc:
+            _logger.error('Failed to generate GitHub App installation token: %s', exc)
+            return {'error': 'token_generation_failed'}
+
+        # 4. Make the request to GitHub
         try:
             response = requests.get(
                 f'{GITHUB_API}/repos/{owner}/{repo}/commits',
@@ -65,22 +76,28 @@ class Environment(models.Model):
             _logger.warning('GitHub API request failed: %s', exc)
             return {'error': 'request_failed'}
 
-        if response.status_code == 401:
-            self.env['deploy.github.token'].clear_token_for_current_user()
-            return {'error': 'not_authenticated'}
+        # 5. Handle authentication and API errors
+        if response.status_code in (401, 403):
+            _logger.error('GitHub App authentication failed (401/403). Check App ID, Installation ID, or Key.')
+            return {'error': 'bad_credentials_or_forbidden'}
 
         if response.status_code != 200:
             return {'error': f'github_api_error_{response.status_code}'}
 
-        commits = [
-            {
-                'sha': c['sha'][:7],
-                'sha_full': c['sha'],
-                'message': c['commit']['message'].split('\n')[0],
-                'author': c['commit']['author']['name'],
-                'date': c['commit']['author']['date'],
-                'url': c['html_url'],
-            }
-            for c in response.json()
-        ]
-        return {'commits': commits}
+        # 6. Parse and return commits cleanly
+        try:
+            commits = [
+                {
+                    'sha': c['sha'][:7],
+                    'sha_full': c['sha'],
+                    'message': c['commit']['message'].split('\n')[0],
+                    'author': c['commit']['author']['name'],
+                    'date': c['commit']['author']['date'],
+                    'url': c['html_url'],
+                }
+                for c in response.json()
+            ]
+            return {'commits': commits}
+        except (KeyError, TypeError) as exc:
+            _logger.error('Failed to parse GitHub JSON payload response: %s', exc)
+            return {'error': 'unexpected_response_format'}

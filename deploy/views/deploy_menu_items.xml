@@ -11,7 +11,14 @@
         <field name="view_mode">list,form</field>
     </record>
 
+    <record model="ir.actions.act_window" id="action_github_app_config">
+        <field name="res_model">github.app.config</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="github_app_config_record"/>
+    </record>
+
     <menuitem id="deploy_menu_root" name="Deploy" sequence="10"/>
     <menuitem id="deploy_menu_vms" name="Virtual Machines" parent="deploy_menu_root" action="action_deploy_vms" sequence="10"/>
     <menuitem id="deploy_menu_environments" name="Environments" parent="deploy_menu_root" action="action_deploy_environments" sequence="20"/>
+    <menuitem id="deploy_menu_github_config" name="GitHub Configuration" parent="deploy_menu_root" action="action_github_app_config" sequence="30"/>
 </odoo>

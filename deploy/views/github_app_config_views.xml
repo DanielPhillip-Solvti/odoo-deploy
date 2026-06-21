@@ -1,0 +1,21 @@
+<odoo>
+    <record id="github_app_config_form_view" model="ir.ui.view">
+        <field name="name">github.app.config.form</field>
+        <field name="model">github.app.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="client_id"/>
+                        <field name="installation_id"/>
+                        <field name="private_key"/>
+                    </group>
+                    <div class="alert alert-info my-1" role="status">
+                        <p class="mb-0">You can create a github app here: <a href="https://github.com/settings/apps" target="_blank">GitHub Apps</a><br/>
+                        The app must have <b>read</b> permissions for <b>repositories</b> and <b>packages</b>.</p>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
