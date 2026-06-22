@@ -88,7 +88,9 @@ services:
     image: ghcr.io/danielphillip-solvti/deploy-agent:main
     container_name: deploy-agent
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - web
+      - deploy-db-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /code:/code
@@ -101,8 +103,8 @@ services:
     environment:
       - POSTGRES_USER=${{POSTGRES_USER}}
       - POSTGRES_PASSWORD=${{POSTGRES_PASSWORD}}
-    volumes:
-      - deploy-db:/var/lib/postgresql:z
+  volumes:
+      - deploy-db:/var/lib/postgresql/data:z
       - /var/run/postgresql:/var/run/postgresql
     restart: unless-stopped
     networks:
@@ -133,8 +135,8 @@ networks:
   web:
     name: web
     driver: bridge
-  db-network:
-    name: db-network
+  deploy-db-network:
+    name: deploy-db-network
     driver: bridge
 EOF
 
