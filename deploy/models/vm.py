@@ -18,6 +18,20 @@ class VM(models.Model):
         default='pending',
         readonly=True
     )
+    bootstrap_script = fields.Text(compute='_compute_bootstrap_script', readonly=True)
+
+    def _compute_bootstrap_script(self):
+        for record in self:
+            if not record.otp:
+                record.bootstrap_script = None
+                continue
+                
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            script = f"curl -sSL {base_url}/agent/install/{record.otp} | bash"
+            record.bootstrap_script = script
+
+    def generate_otp(self):
+        self.otp = self._generate_otp()
 
     def _generate_otp(self):
         return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -36,6 +50,8 @@ class VM(models.Model):
         for vals in vals_list:
             vals['otp'] = self._generate_otp()
         return super().create(vals_list)
+
+    # Agent Actions ----------------------------------
     
     def check_health(self):
         return AgentService().check_health(self)

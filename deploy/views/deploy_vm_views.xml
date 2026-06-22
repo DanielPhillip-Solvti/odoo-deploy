@@ -10,6 +10,7 @@
                     <button name="backup_with_dump" type="object" string="Backup(With Dump)" class="btn-secondary"/>
                     <button name="download_production_dump" type="object" string="Backup(Production)" class="btn-secondary"/>
                     <button name="download_neutralised_dump" type="object" string="Backup(Neutralised)" class="btn-secondary"/>
+                    <button name="generate_otp" type="object" string="Generate OTP" class="btn-secondary"/>
                 </header>
                 <sheet>
                     <group>
@@ -17,6 +18,7 @@
                         <field name="url"/>
                         <field name="otp"/>
                         <field name="repository_url"/>
+                        <field name="bootstrap_script" invisible="not bootstrap_script"/>
                     </group>
                     <notebook>
                         <page string="Environments">

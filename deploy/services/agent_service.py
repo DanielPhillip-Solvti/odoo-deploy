@@ -1,7 +1,7 @@
 import requests
 
 _ENDPOINTS = {
-    'check_health': {'route': '/health', 'method': 'GET'},
+    'check_health': {'route': '/health', 'method': 'POST'},
     'backup': {'route': '/backup', 'method': 'POST', 'required_fields': ['branch','with_dump']},
     'deploy': {'route': '/deploy', 'method': 'POST', 'required_fields': ['branch', 'github_token']},
     'download_dump': {'route': '/dump', 'method': 'GET', 'required_fields': ['is_production']},
@@ -66,7 +66,9 @@ class AgentService:
     # -------------------------------------------------------------------------
     # Operational Service Methods
     # -------------------------------------------------------------------------
-
+    def check_env_health(self, env_record):
+        return self._request(env_record.url, 'check_health', branch=env_record.repository_branch)
+    
     def check_health(self, vm_record):
         return self._request(vm_record.url, 'check_health')
     

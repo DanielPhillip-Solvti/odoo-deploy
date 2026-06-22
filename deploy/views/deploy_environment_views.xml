@@ -28,6 +28,7 @@
                     <notebook>
                         <page string="Commands">
                             <div class="d-flex flex-row gap-2">
+                                <button name="check_health" type="object" string="Check Health" class="btn-primary"/>
                                 <button name="reset_branch" type="object" string="Reset Branch" class="btn-primary"/>
                                 <button name="restart_odoo" type="object" string="Restart Odoo" class="btn-primary"/>
                                 <button name="restore_backup" type="object" string="Restore Backup" class="btn-primary"/>
