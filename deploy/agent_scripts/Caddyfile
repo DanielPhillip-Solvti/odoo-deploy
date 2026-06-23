@@ -1,0 +1,9 @@
+# Global configuration block
+{
+    email admin@example.com
+}
+
+# Basic placeholder catch-all route over HTTP
+:80 {
+    respond "Infrastructure initialized. Deploy environments via Odoo to map domains." 200
+}

@@ -23,12 +23,30 @@ class VM(models.Model):
     def _compute_bootstrap_script(self):
         for record in self:
             if not record.otp:
-                record.bootstrap_script = None
+                record.bootstrap_script = False
                 continue
-                
+
             base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-            script = f"curl -sSL {base_url}/agent/install/{record.otp} | bash"
-            record.bootstrap_script = script
+
+            if not base_url:
+                record.bootstrap_script = False
+                continue
+
+            base_url = base_url.rstrip('/')
+
+            curl_cmd = (
+                f"curl -fsSL \"{base_url}/agent/get_script/bootstrap/sh\" -o setup.sh && "
+                f"chmod +x setup.sh && "
+                f"./setup.sh "
+                f"--odoo-url \"{base_url}\" "
+                f"--vm-id \"{record.id}\" "
+                f"--otp \"{record.otp}\" "
+                f"--env \"production\" "
+                f"--postgres-user \"postgres\" "
+                f"--postgres-password \"odoo\" "
+            )
+
+            record.bootstrap_script = curl_cmd
 
     def generate_otp(self):
         self.otp = self._generate_otp()
