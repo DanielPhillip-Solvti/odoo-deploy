@@ -1,0 +1,100 @@
+<odoo>
+    <!-- Environment Tree/List View -->
+    <record id="deploy_environment_tree_view" model="ir.ui.view">
+        <field name="name">deploy.environment.tree</field>
+        <field name="model">deploy.environment</field>
+        <field name="arch" type="xml">
+            <list string="Branch Environments">
+                <field name="repository_branch" decoration-bf="1" />
+                <field name="odoo_version" widget="badge" decoration-info="1" />
+                <field name="is_production" widget="boolean_toggle" string="Production" />
+                <field
+                    name="state"
+                    widget="badge"
+                    decoration-success="state == 'active'"
+                    decoration-warning="state == 'deploying'"
+                    decoration-danger="state == 'error'"
+                />
+            </list>
+        </field>
+    </record>
+
+    <!-- Environment Detail Form View -->
+    <record id="deploy_environment_form_view" model="ir.ui.view">
+        <field name="name">deploy.environment.form</field>
+        <field name="model">deploy.environment</field>
+        <field name="arch" type="xml">
+            <form string="Environment Profile">
+                <!-- Cleaner header controls using system defaults -->
+                <header>
+                    <button name="deploy" type="object" string="Deploy Branch" class="oe_highlight" icon="fa-cloud-upload" />
+                    <button name="check_health" type="object" string="Check Health" icon="fa-heartbeat" />
+                    <button name="restart_odoo" type="object" string="Restart Service" icon="fa-refresh" />
+                    <button name="restore_backup" type="object" string="Restore Backup" icon="fa-history" />
+                    <button
+                        name="reset_branch"
+                        type="object"
+                        string="Reset Git Pointer"
+                        icon="fa-undo"
+                        confirm="Are you sure you want to perform a hard reset on this branch?&#10;Any uncommitted local work will be lost."
+                    />
+
+                    <button
+                        name="undeploy"
+                        type="object"
+                        string="Remove Environment"
+                        class="btn-outline-danger"
+                        icon="fa-trash"
+                        confirm="This action will completely tear down the container environment and drop related runtime configurations."
+                    />
+
+                    <field name="state" widget="statusbar" statusbar_visible="draft,deploying,active,error" />
+                </header>
+
+                <sheet>
+                    <div class="oe_title mb-4">
+                        <label for="repository_branch" string="Monitored Branch" class="text-uppercase small fw-bold text-muted" />
+                        <h1 class="m-0">
+                            <field name="repository_branch" placeholder="e.g. main" />
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Source Git Context">
+                            <field name="repository_url" widget="CopyClipboardChar" readonly="1" string="Origin URL" />
+                            <field name="url" widget="CopyClipboardChar" string="Public Deploy Target Address" />
+                        </group>
+                        <group string="Infrastructure Blueprint">
+                            <field name="odoo_version" />
+                            <field
+                                name="is_production"
+                                widget="boolean_toggle"
+                                string="Production"
+                                help="Optimizes PostgreSQL parameters and configures cache settings suited for high live traffic."
+                            />
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Log console layout styled via theme-safe layout properties -->
+                        <page string="Realtime Deployment Logs" name="logs">
+                            <div class="border rounded shadow-sm p-3 log-console-panel">
+                                <field
+                                    name="log_text"
+                                    nolabel="1"
+                                    readonly="1"
+                                    class="w-100"
+                                    style="resize: none;"
+                                    placeholder="Log output will appear here after deployment actions are triggered."
+                                />
+                            </div>
+                        </page>
+                        <page string="Commit Build History" name="history">
+                            <widget name="github_commit_history" />
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

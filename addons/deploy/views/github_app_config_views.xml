@@ -1,0 +1,57 @@
+<odoo>
+    <record id="github_app_config_form_view" model="ir.ui.view">
+        <field name="name">github.app.config.form</field>
+        <field name="model">github.app.config</field>
+        <field name="arch" type="xml">
+            <form string="GitHub Integration Configuration">
+                <sheet>
+                    <div class="oe_title mb-3">
+                        <h2>GitHub App Integration</h2>
+                    </div>
+
+                    <group>
+                        <group string="GitHub App Registry Credentials">
+                            <field name="client_id" placeholder="e.g. Iv1.8217f309a..." />
+                            <field
+                                name="installation_id"
+                                placeholder="e.g. 48109284"
+                                help="The numeric identifier found in your GitHub App installation URL."
+                            />
+                        </group>
+                        <group string="Authentication Key Matrix">
+                            <field
+                                name="private_key"
+                                widget="CopyClipboardText"
+                                placeholder="Paste your Private PEM Key (---BEGIN RSA PRIVATE KEY---)"
+                                style="height: 120px;"
+                            />
+                        </group>
+                    </group>
+
+                    <!-- Refactored alert information pane -->
+                    <div class="alert alert-info d-flex align-items-center mt-3 gap-2" role="status">
+                        <i class="fa fa-github fa-2x text-muted me-2" title="GitHub Integration" />
+                        <div>
+                            <p class="mb-1 fw-bold">Setup Guide Information:</p>
+                            <p class="mb-0">
+                                Register a custom enterprise app via
+                                <a href="https://github.com/settings/apps" target="_blank" class="alert-link text-decoration-underline">
+                                    GitHub Developer Apps
+                                </a>
+                                .
+                                <br />
+                                Ensure your integration app is granted
+                                <strong>Read Access</strong>
+                                permissions for both
+                                <strong>Repositories</strong>
+                                and
+                                <strong>Packages / Container Registry</strong>
+                                .
+                            </p>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

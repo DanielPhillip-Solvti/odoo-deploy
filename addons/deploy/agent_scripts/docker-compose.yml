@@ -1,0 +1,55 @@
+services:
+  agent:
+    image: ghcr.io/danielphillip-solvti/deploy-agent:main
+    container_name: deploy-agent
+    restart: unless-stopped
+    networks:
+      - web
+      - deploy-db-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /code:/code
+    env_file:
+      - .env
+
+  db:
+    image: pgvector/pgvector:pg18-trixie
+    container_name: deploy-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - deploy-db:/var/lib/postgresql
+    networks:
+      - deploy-db-network
+
+  caddy:
+    image: caddy:latest
+    container_name: deploy-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:
+  deploy-db:
+
+networks:
+  web:
+    name: web
+    driver: bridge
+
+  deploy-db-network:
+    name: deploy-db-network
+    driver: bridge
