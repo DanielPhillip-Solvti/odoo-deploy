@@ -28,8 +28,6 @@
                 <!-- Cleaner header controls using system defaults -->
                 <header>
                     <button name="deploy" type="object" string="Deploy Branch" class="oe_highlight" icon="fa-cloud-upload" />
-                    <button name="check_health" type="object" string="Check Health" icon="fa-heartbeat" />
-                    <button name="restart_odoo" type="object" string="Restart Service" icon="fa-refresh" />
                     <button name="restore_backup" type="object" string="Restore Backup" icon="fa-history" />
                     <button
                         name="reset_branch"
@@ -62,7 +60,6 @@
                     <group>
                         <group string="Source Git Context">
                             <field name="repository_url" widget="CopyClipboardChar" readonly="1" string="Origin URL" />
-                            <field name="url" widget="CopyClipboardChar" string="Public Deploy Target Address" />
                         </group>
                         <group string="Infrastructure Blueprint">
                             <field name="odoo_version" />

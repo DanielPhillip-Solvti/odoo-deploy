@@ -1,45 +1,44 @@
-import os
-
-from odoo import _, http
-from odoo.exceptions import UserError
+from odoo import http, fields
 from odoo.http import request
 from odoo.modules.module import get_module_path
+from ..data_objects.heartbeat import HeartbeatPayload, EventCallbackPayload
 
+import os
 
-class VMController(http.Controller):
-    @http.route("/register_agent", type="jsonrpc", auth="public")
-    def register_agent(self, **kwargs):
-        vm_id = kwargs.get("vm_id", False)
-        otp = kwargs.get("otp", False)
-        ip_address = kwargs.get("ip_address", False)
+import logging
+_logger = logging.getLogger(__name__)
 
-        if not (vm_id and otp and ip_address):
-            raise UserError(_("vm_id, otp and ip address must be provided to allow an agent registration"))
+class AgentController(http.Controller):
+    @http.route('/agent/heartbeat', type='jsonrpc', auth='public', methods=['POST'], csrf=False)
+    def agent_heartbeat(self, **kwargs : HeartbeatPayload):
+        agent = request.env['deploy.agent'].sudo().search([('api_key', '=', request.httprequest.headers.get('X-API-KEY'))], limit=1)
+        if not agent:
+            return {'error': 'Invalid API Key'}
 
-        vm = request.env["deploy.vm"].browse(vm_id)
-        if not vm:
-            raise UserError(_("vm with id %s not found", vm_id))
+        heartbeat_payload = HeartbeatPayload(**kwargs)
+        agent.sudo().write({
+            'last_heartbeat': fields.Datetime.now(),
+            'heartbeat_payload': heartbeat_payload.dict(),
+        })
 
-        return vm.sudo().exchange_otp(otp, ip_address)
+        events = agent.get_events(last_event_id=heartbeat_payload.last_event_id)
+        return {'status': 'success', 'message': 'Heartbeat received', 'events': events}
 
-    def _get_agent_script_file(self, script_name):
-        """Helper method to retrieve a script file from the module directory."""
-        module_path = get_module_path("deploy")
-        script_path = os.path.join(module_path, "agent_scripts", script_name)
+    @http.route('/agent/callback/<int:event_id>', type='jsonrpc', auth='public', methods=['POST'], csrf=False)
+    def agent_event_callback(self, event_id, **kwargs : EventCallbackPayload ):
+        agent = request.env['deploy.agent'].sudo().search([('api_key', '=', request.httprequest.headers.get('X-API-KEY'))], limit=1)
+        if not agent:
+            return {'error': 'Invalid API Key'}
 
-        if not os.path.exists(script_path):
-            return None
+        event = agent.event_ids.filtered(lambda e: e.id == event_id)
+        callback = EventCallbackPayload(**kwargs)
 
-        with open(script_path) as f:
-            return f.read()
+        if not event:
+            _logger.warning(f"event repsonse received: {event_id}. status: {callback.status}. message: {callback.message}")
 
-    @http.route(
-        "/agent/get_script/<string:script_name>/<string:script_extension>",
-        type="http",
-        auth="public",
-        methods=["GET"],
-        csrf=False,
-    )
+        return {'status': 'success'}
+
+    @http.route('/agent/get_script/<string:script_name>/<string:script_extension>', type='http', auth='public', methods=['GET'], csrf=False)
     def get_script(self, script_name, script_extension):
         """Serve a script from the module directory"""
 
@@ -47,17 +46,19 @@ class VMController(http.Controller):
         if script_extension != "0":
             filename += f".{script_extension}"
 
-        module_path = get_module_path("deploy")
-        script_path = os.path.join(module_path, "agent_scripts", filename)
-
+        module_path = get_module_path('deploy')
+        script_path = os.path.join(module_path, 'agent_scripts', filename)
+        
         if not os.path.exists(script_path):
             return http.Response("Script not found", status=404)
-
-        with open(script_path) as f:
+        
+        with open(script_path, 'r') as f:
             script_content = f.read()
 
         return http.Response(
             script_content,
-            mimetype="text/plain",
-            headers=[("Content-Disposition", f'attachment; filename="{filename}"')],
+            mimetype='text/plain',
+            headers=[
+                ('Content-Disposition', f'attachment; filename="{filename}"')
+            ]
         )

@@ -1,11 +1,10 @@
 <odoo>
-    <record id="deploy_vm_form_view" model="ir.ui.view">
-        <field name="name">deploy.vm.form</field>
-        <field name="model">deploy.vm</field>
+    <record id="deploy_agent_form_view" model="ir.ui.view">
+        <field name="name">deploy.agent.form</field>
+        <field name="model">deploy.agent</field>
         <field name="arch" type="xml">
-            <form string="Client Project Dashboard" class="o_deploy_vm_form">
+            <form string="Client Project Dashboard" class="o_deploy_agent_form">
                 <header>
-                    <button name="check_health" type="object" string="Check Health" class="oe_highlight" icon="fa-heartbeat" />
                     <field name="status" widget="statusbar" statusbar_visible="offline,pending,active,error" />
                 </header>
 
@@ -36,17 +35,6 @@
                         <div class="col-12 col-md-4">
                             <div class="card shadow-sm border p-3 bg-view">
                                 <div class="text-muted small text-uppercase fw-bold">
-                                    <i class="fa fa-globe me-1" />
-                                    Infrastructure Endpoint
-                                </div>
-                                <div class="fs-6 fw-semibold mt-1 text-truncate">
-                                    <field name="url" readonly="1" />
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="card shadow-sm border p-3 bg-view">
-                                <div class="text-muted small text-uppercase fw-bold">
                                     <i class="fa fa-git me-1" />
                                     Connected Repository
                                 </div>
@@ -65,7 +53,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5 class="m-0 fw-semibold text-muted">Active Server Branch Environments</h5>
                                 </div>
-                                <field name="environment_ids" mode="list">
+                                <field name="staging_environment_ids" mode="list">
                                     <list string="Active Branches" edit="false" create="true">
                                         <field name="repository_branch" decoration-bf="1" />
                                         <field name="odoo_version" widget="badge" decoration-info="1" />
@@ -162,11 +150,11 @@
                                 </div>
 
                                 <div class="mt-4">
-                                    <group string="One-Time Authentication Key">
-                                        <label for="otp" string="Authentication Key" class="text-muted small fw-bold mb-1" />
+                                    <group string="Authentication Key">
+                                        <label for="api_key" string="Authentication Key" class="text-muted small fw-bold mb-1" />
                                         <div class="o_row gap-2">
-                                            <field name="otp" widget="CopyClipboardChar" />
-                                            <button name="generate_otp" type="object" string="Regenerate" icon="fa-refresh" />
+                                            <field name="api_key" widget="CopyClipboardChar" />
+                                            <button name="generate_api_key" type="object" string="Regenerate" icon="fa-refresh" />
                                         </div>
                                     </group>
                                 </div>
@@ -179,7 +167,6 @@
                                 <h5 class="fw-semibold mb-4">Network Credentials &amp; Key Settings</h5>
                                 <group>
                                     <group string="Specifications Settings">
-                                        <field name="url" widget="CopyClipboardChar" string="Agent URL" />
                                         <field name="repository_url" widget="CopyClipboardChar" string="Target Repository URL" />
                                     </group>
                                 </group>

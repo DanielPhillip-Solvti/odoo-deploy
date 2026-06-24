@@ -10,12 +10,10 @@ _logger = logging.getLogger(__name__)
 
 GITHUB_API = "https://api.github.com"
 
-
 class Environment(models.Model):
     _name = "deploy.environment"
     _description = "Deployment Environment"
 
-    url = fields.Char(string="Agent URL", related="vm_id.url", readonly=True)
     repository_branch = fields.Char(required=True, help="Git repository branch for the Odoo deployment")
     odoo_version = fields.Selection(
         [
@@ -32,51 +30,48 @@ class Environment(models.Model):
         string="Platform Engine Version",
     )
     is_production = fields.Boolean(string="is_production", default=False)
-    vm_id = fields.Many2one("deploy.vm", required=True, ondelete="cascade")
-    repository_url = fields.Char(related="vm_id.repository_url")
+    agent_id = fields.Many2one("deploy.agent", required=True, ondelete="cascade")
+    repository_url = fields.Char(related="agent_id.repository_url")
     state = fields.Selection(
-        [("draft", "Draft"), ("deploying", "Deploying"), ("active", "Active"), ("error", "Error")],
-        default="draft",
+        [("deploying", "Deploying"), ("active", "Active"), ("error", "Error")],
+        default="deploying",
         readonly=True,
     )
     log_text = fields.Text(string="Deployment Logs", readonly=True)
 
     _unique_environment = models.Constraint(
-        "unique(vm_id, repository_branch)", "Only one environment per project and branch is allowed."
+        "unique(agent_id, repository_branch)", "Only one environment per project and branch is allowed."
     )
 
-    @api.constrains("is_production", "vm_id")
+    @api.constrains("is_production", "agent_id")
     def _check_single_production_environment(self):
         for record in self:
             if record.is_production:
                 existing_prod_env = self.search(
-                    [("vm_id", "=", record.vm_id.id), ("is_production", "=", True), ("id", "!=", record.id)], limit=1
+                    [("agent_id", "=", record.agent_id.id), ("is_production", "=", True), ("id", "!=", record.id)], limit=1
                 )
                 if existing_prod_env:
                     raise UserError(_("Only one production environment is allowed per project."))
 
     # Agent Actions ----------------------------------
 
-    def check_health(self):
-        return AgentService().check_env_health(self)
-
     def deploy(self):
-        return AgentService().deploy(self)
+        return AgentService(self.agent_id).deploy(self.repository_branch, self.is_production)
 
     def reset_branch(self):
-        return AgentService().reset_branch(self)
+        return AgentService(self.agent_id).reset_branch(self.repository_branch)
 
-    def restart_odoo(self):
-        return AgentService().restart_odoo(self)
+    def update_module(self, module_name):
+        return AgentService(self.agent_id).update_module(self.repository_branch, module_name)
 
     def restore_backup(self):
-        return AgentService().restore_backup(self)
+        return AgentService(self.agent_id).restore_backup(self.repository_branch)
 
     def undeploy(self):
-        return AgentService().undeploy(self)
+        return AgentService(self.agent_id).undeploy(self.repository_branch)
 
     def stream_logs(self):
-        return AgentService().stream_logs(self)
+        return AgentService(self.agent_id).stream_logs(self.repository_branch)
 
     def get_github_commits(self):
         self.ensure_one()

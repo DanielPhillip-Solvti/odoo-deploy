@@ -8,7 +8,8 @@
     "data": [
         "security/ir.model.access.csv",
         "views/deploy_environment_views.xml",
-        "views/deploy_vm_views.xml",
+        "views/deploy_agent_views.xml",
+        "views/deploy_event_views.xml",
         "views/deploy_menu_items.xml",
         "views/github_app_config_views.xml",
         "data/github_app_config.xml",
