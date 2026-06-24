@@ -23,7 +23,7 @@ jobs:
       - name: Compile Go Agent Binary
         run: |
           cd agent
-          make build
+          make build-agent
 
       - name: Create Github Release
         uses: softprops/action-gh-release@v2
