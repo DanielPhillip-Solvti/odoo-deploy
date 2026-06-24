@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -14,8 +13,8 @@ type Heartbeat struct {
 }
 
 type jsonRequest struct {
-	JSONRPC string             `json:"jsonrpc"`
-	Params  registrationParams `json:"params"`
+	JSONRPC string    `json:"jsonrpc"`
+	Params  Heartbeat `json:"params"`
 }
 
 type jsonRPCError struct {
@@ -36,29 +35,23 @@ func outboundIP() (string, error) {
 	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
 }
 
-func RegisterHeartbeat(odooURL, apiKey, port string) error {
-	ip, err := outboundIP()
-	if err != nil {
-		return err
-	}
-
-	agentURL := fmt.Sprintf("http://%s:%s", ip, port)
-
+func SendHeartbeat(odooURL, apiKey string) error {
 	body, err := json.Marshal(jsonRequest{
 		JSONRPC: "2.0",
 		Params: Heartbeat{
 		},
 	})
+
 	if err != nil {
 		return fmt.Errorf("failed to marshal registration request: %w", err)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	// add api key as bearer token in the request header
 	req, err := http.NewRequest("POST", odooURL+"/heartbeat", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create registration request: %w", err)
 	}
+
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
