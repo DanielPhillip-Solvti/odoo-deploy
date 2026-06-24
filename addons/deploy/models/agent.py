@@ -1,7 +1,4 @@
-import random
-import string
-
-from odoo import api, fields, models
+from odoo import api, fields, models, api
 from ..services.agent_service import AgentService
 
 class Agent(models.Model):
@@ -32,6 +29,7 @@ class Agent(models.Model):
 
     event_ids = fields.One2many('deploy.event', 'agent_id')
 
+    @api.depends('last_heartbeat')
     def _compute_status(self):
         for record in self:
             if not record.last_heartbeat:
@@ -76,6 +74,7 @@ class Agent(models.Model):
                 f'curl -fsSL "{base_url}/agent/get_script/bootstrap/sh" -o setup.sh && '
                 f"chmod +x setup.sh && "
                 f"./setup.sh "
+                f"--odoo-url \"{base_url}\" "
                 f'--api-key "{record.api_key}"'
             )
 

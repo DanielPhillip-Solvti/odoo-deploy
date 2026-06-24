@@ -17,26 +17,16 @@ fi
 # ARGUMENT PARSING
 # -----------------------------
 ODOO_URL=""
-AGENT_VM_ID=""
-AGENT_OTP=""
-POSTGRES_USER=""
-POSTGRES_PASSWORD=""
-ENV="production"
+API_KEY=""
+POSTGRES_USER=odoo
+POSTGRES_PASSWORD=odoo
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --odoo-url)
       ODOO_URL="$2"; shift 2 ;;
-    --vm-id)
-      AGENT_VM_ID="$2"; shift 2 ;;
-    --otp)
-      AGENT_OTP="$2"; shift 2 ;;
-    --postgres-user)
-      POSTGRES_USER="$2"; shift 2 ;;
-    --postgres-password)
-      POSTGRES_PASSWORD="$2"; shift 2 ;;
-    --env)
-      ENV="$2"; shift 2 ;;
+    --api-key)
+      API_KEY="$2"; shift 2 ;;
     *)
       echo "❌ Unknown parameter: $1"
       exit 1 ;;
@@ -47,8 +37,8 @@ done
 # VALIDATION
 # -----------------------------
 
-if [[ -z "$ODOO_URL" || -z "$AGENT_VM_ID" || -z "$AGENT_OTP" ]]; then
-    echo "❌ Missing required agent parameters (--odoo-url, --vm-id, --otp)"
+if [[ -z "$ODOO_URL" || -z "$API_KEY" ]]; then
+    echo "❌ Missing required agent parameters (--odoo-url, --api-key)"
     exit 1
 fi
 
@@ -90,15 +80,11 @@ echo "📝 Writing environment configuration..."
 cat > .env <<EOF
 # Agent Config
 ODOO_URL=$ODOO_URL
-AGENT_VM_ID=$AGENT_VM_ID
-AGENT_OTP=$AGENT_OTP
+API_KEY=$API_KEY
 
 # Database Config
 POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-
-# Runtime
-ENV=$ENV
 EOF
 
 chmod 600 .env
@@ -135,18 +121,12 @@ if docker compose ps | grep -q "Exit"; then
 fi
 
 # -----------------------------
-# SUMMARY
+# Agent
 # -----------------------------
-echo ""
-echo "✅ Deployment complete!"
-echo "📍 Environment: $ENV"
-echo "📂 Workspace: $TARGET_DIR"
-echo ""
-echo "📊 Status:"
-docker compose ps
+# fetch release https://github.com/DanielPhillip-Solvti/odoo-deploy-agent/releases/tag/v1.0.0
+curl -L https://github.com/DanielPhillip-Solvti/odoo-deploy/releases/download/v1.0.0/agent -o $TARGET_DIR/agent
+chmod +x $TARGET_DIR/agent
 
-echo ""
-echo "📌 Useful commands:"
-echo "   cd $TARGET_DIR"
-echo "   docker compose logs -f"
-echo "   docker compose restart"
+# start agent (TODO: run as service)
+set -a && . $TARGET_DIR/.env
+$TARGET_DIR/agent

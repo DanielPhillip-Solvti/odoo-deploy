@@ -9,24 +9,32 @@ import logging
 _logger = logging.getLogger(__name__)
 
 class AgentController(http.Controller):
+    def _extract_api_key(self):
+        auth_header = request.httprequest.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            return auth_header.split(' ', 1)[1]
+        return None
+    
     @http.route('/agent/heartbeat', type='jsonrpc', auth='public', methods=['POST'], csrf=False)
     def agent_heartbeat(self, **kwargs : HeartbeatPayload):
-        agent = request.env['deploy.agent'].sudo().search([('api_key', '=', request.httprequest.headers.get('X-API-KEY'))], limit=1)
+        token = self._extract_api_key()
+        agent = request.env['deploy.agent'].sudo().search([('api_key', '=', token)], limit=1)
         if not agent:
             return {'error': 'Invalid API Key'}
 
-        heartbeat_payload = HeartbeatPayload(**kwargs)
+        # heartbeat_payload = HeartbeatPayload(**kwargs)
         agent.sudo().write({
             'last_heartbeat': fields.Datetime.now(),
-            'heartbeat_payload': heartbeat_payload.dict(),
+            # 'heartbeat_payload': heartbeat_payload.dict(),
         })
 
-        events = agent.get_events(last_event_id=heartbeat_payload.last_event_id)
-        return {'status': 'success', 'message': 'Heartbeat received', 'events': events}
+        # events = agent.get_events(last_event_id=heartbeat_payload.last_event_id)
+        return {'status': 'success', 'message': 'Heartbeat received', 'events': []}
 
     @http.route('/agent/callback/<int:event_id>', type='jsonrpc', auth='public', methods=['POST'], csrf=False)
     def agent_event_callback(self, event_id, **kwargs : EventCallbackPayload ):
-        agent = request.env['deploy.agent'].sudo().search([('api_key', '=', request.httprequest.headers.get('X-API-KEY'))], limit=1)
+        token = self._extract_api_key()
+        agent = request.env['deploy.agent'].sudo().search([('api_key', '=', token)], limit=1)
         if not agent:
             return {'error': 'Invalid API Key'}
 

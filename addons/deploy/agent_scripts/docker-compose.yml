@@ -1,17 +1,4 @@
 services:
-  agent:
-    image: ghcr.io/danielphillip-solvti/deploy-agent:main
-    container_name: deploy-agent
-    restart: unless-stopped
-    networks:
-      - web
-      - deploy-db-network
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /code:/code
-    env_file:
-      - .env
-
   db:
     image: pgvector/pgvector:pg18-trixie
     container_name: deploy-db
