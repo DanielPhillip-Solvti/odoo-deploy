@@ -28,26 +28,8 @@ echo "🧹 Optionally storing credential helper (recommended fallback)..."
 
 git config --global credential.helper store
 
-# Log in to deploy-agent container if it's running to ensure it can pull from GHCR
-
-if docker ps --format '{{.Names}}' | grep -qx 'deploy-agent'; then
-echo "🐳 Logging deploy-agent container into GHCR..."
-
-docker exec -i deploy-agent sh -c "
-mkdir -p /root/.docker &&
-cat >/tmp/ghcr_pat &&
-docker login ghcr.io -u '$GITHUB_USER' --password-stdin </tmp/ghcr_pat &&
-rm -f /tmp/ghcr_pat
-" <<< "$GITHUB_PAT"
-
-echo "✅ deploy-agent authenticated"
-else
-echo "⚠️ deploy-agent container not running, skipping container login"
-fi
-
 echo ""
 echo "✅ Login complete!"
 echo "   - GHCR authenticated"
 echo "   - Git configured for HTTPS PAT auth"
 echo ""
-echo "⚠️ Note: PAT is stored in Git config rewrite rule (not ideal for shared machines)"

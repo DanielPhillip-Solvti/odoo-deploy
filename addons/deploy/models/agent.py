@@ -76,6 +76,7 @@ class Agent(models.Model):
                 f'curl -fsSL "{base_url}/agent/get_script/bootstrap/sh" -o setup.sh && '
                 f"chmod +x setup.sh && "
                 f"./setup.sh "
+                f"--odoo-url \"{base_url}\" "
                 f'--api-key "{record.api_key}"'
             )
 
