@@ -1,0 +1,4 @@
+<odoo>
+    <!-- create single GitHub App Config record -->
+    <record model="github.app.config" id="github_app_config_record" />
+</odoo>

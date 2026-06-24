@@ -1,0 +1,25 @@
+/* Standard layout variables. No forced hex-colors to maintain full light/dark responsiveness */
+.deploy-action-card {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+}
+
+.log-console-panel {
+    /* Safe container boundaries for code/log output boxes */
+    height: 380px;
+    overflow-y: auto;
+
+    /* Scale child field components to fill container dynamically */
+    textarea,
+    .o_field_text {
+        height: 100% !important;
+        resize: none !important;
+        outline: none !important;
+        border: 0 !important;
+        padding: 0 !important;
+    }
+}
