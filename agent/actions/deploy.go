@@ -37,7 +37,6 @@ func Deploy(p DeployParams) (string, error) {
 	odooVersion := p.OdooVersion
 	isProduction := p.IsProduction
 	envDir := config.EnvPathAgent(branch)
-	token := p.GithubToken
 
 	// Create environment directory if it doesn't exist
 	if err := os.MkdirAll(envDir, 0755); err != nil {
@@ -88,16 +87,9 @@ func Deploy(p DeployParams) (string, error) {
 		}
 	}
 
-	repoURL := strings.Replace(
-		addonsRepository,
-		"https://github.com/",
-		fmt.Sprintf("https://x-access-token:%s@github.com/", token),
-		1,
-	)
-
 	// --- 3. Clone or Update Custom Addons ---
 	addonsDir := config.AddonsPathAgent(branch)
-	if _, err := helpers.RunCmd("git", "clone", repoURL, addonsDir); err != nil {
+	if _, err := helpers.RunCmd("git", "clone", addonsRepository, addonsDir); err != nil {
 		return "", err
 	}
 

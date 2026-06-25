@@ -1,7 +1,7 @@
 package main
 
 import (
-	"agent/requests"
+	"agent/heartbeat"
 	"log"
 	"os"
 	"time"
@@ -18,14 +18,13 @@ func main() {
 		log.Fatal("API_KEY env var not set")
 	}
 
-	// Periodically send heartbeat to Odoo server
 	heartbeatTicker := time.NewTicker(30 * time.Second)
 	defer heartbeatTicker.Stop()
 
 	for {
 		select {
 		case <-heartbeatTicker.C:
-			err := requests.SendHeartbeat(odooURL, apiKey)
+			err := heartbeat.ExchangeHeartbeat(odooURL, apiKey)
 			if err != nil {
 				log.Printf("Error sending heartbeat: %v", err)
 			} else {

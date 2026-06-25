@@ -43,7 +43,7 @@ class Agent(models.Model):
 
     def get_events(self, last_event_id=None):
         self.ensure_one()
-        events = self.event_ids
+        events = self.agent.event_ids
         if last_event_id is not None:
             events = events.filtered(lambda e: e.id > last_event_id)
         return [event.to_dict() for event in events.sorted(key=lambda e: e.timestamp)]

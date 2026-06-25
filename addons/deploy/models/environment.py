@@ -33,7 +33,7 @@ class Environment(models.Model):
     agent_id = fields.Many2one("deploy.agent", required=True, ondelete="cascade")
     repository_url = fields.Char(related="agent_id.repository_url")
     state = fields.Selection(
-        [("deploying", "Deploying"), ("active", "Active"), ("error", "Error")],
+        [("deploying", "Deploying"), ("active", "Active"), ("error", "Error"). ('inactive', 'Inactive')],
         default="deploying",
         readonly=True,
     )
