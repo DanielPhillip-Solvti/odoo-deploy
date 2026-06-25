@@ -26,7 +26,7 @@ func BuildHeartbeat() Heartbeat {
 	// check local services on docker to build accurate heartbeat
 	return Heartbeat{
 		LastEventID: 0,
-		RepoURL:     "",
+		RepoURL:     "new repo",
 		ProductionBranch: EnvironmentState{
 			Branch: "main",
 			Status: EnvironmentStatusActive,
@@ -34,4 +34,3 @@ func BuildHeartbeat() Heartbeat {
 		StagingBranches: []EnvironmentState{},
 	}
 }
-	

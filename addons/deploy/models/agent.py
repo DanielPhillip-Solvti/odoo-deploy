@@ -1,56 +1,54 @@
-from odoo import api, fields, models, api
+from odoo import api, fields, models
+
 from ..services.agent_service import AgentService
+
 
 class Agent(models.Model):
     _name = "deploy.agent"
     _description = "Client Project"
 
-    name = fields.Char(string='Name', required=True)
-    api_key = fields.Obscure(string='API Key', readonly=True)
-    production_environment_id = fields.Many2one("deploy.environment", string="Production Environment", readonly=True)
-    staging_environment_ids = fields.One2many("deploy.environment", "agent_id", string="Environments", domain=[("is_production", "=", False)])
+    name = fields.Char(required=True)
+    api_key = fields.Obscure(readonly=True)
+    production_environment_id = fields.Many2one("deploy.environment", readonly=True)
+    staging_environment_ids = fields.One2many("deploy.environment", "agent_id", domain=[("is_production", "=", False)])
     bootstrap_script = fields.Text(compute="_compute_bootstrap_script", readonly=True)
     repository_url = fields.Char(
-        string="Repository URL",
         required=True,
         help="Git repository URL for the Odoo deployment including branch or tag if necessary",
     )
 
-    last_heartbeat = fields.Datetime(string='Last Heartbeat')
-    heartbeat_payload = fields.Json(string='Heartbeat Payload')
+    last_heartbeat = fields.Datetime()
+    heartbeat_payload = fields.Json()
 
     status = fields.Selection(
-        selection=[('offline', 'Offline'), ('active', 'Active'), ('error', 'Error')],
-        string='Status',
-        compute='_compute_status',
-        store=True,
-        default='offline',
+        selection=[("offline", "Offline"), ("active", "Active"), ("error", "Error")],
+        compute="_compute_status",
+        default="offline",
     )
 
-    event_ids = fields.One2many('deploy.event', 'agent_id')
+    event_ids = fields.One2many("deploy.event", "agent_id")
 
-    @api.depends('last_heartbeat')
     def _compute_status(self):
         for record in self:
             if not record.last_heartbeat:
-                record.status = 'offline'
+                record.status = "offline"
             else:
                 time_since_last_heartbeat = fields.Datetime.now() - record.last_heartbeat
                 if time_since_last_heartbeat.total_seconds() > 300:  # 5 minutes threshold
-                    record.status = 'offline'
+                    record.status = "offline"
                 else:
-                    record.status = 'active'
+                    record.status = "active"
 
     def get_events(self, last_event_id=None):
         self.ensure_one()
-        events = self.agent.event_ids
+        events = self.event_ids
         if last_event_id is not None:
             events = events.filtered(lambda e: e.id > last_event_id)
         return [event.to_dict() for event in events.sorted(key=lambda e: e.timestamp)]
 
     def generate_api_key(self):
         self.ensure_one()
-        self.api_key = 'generated_api_key' + str(self.id)
+        self.api_key = "generated_api_key" + str(self.id)
 
     def _compute_bootstrap_script(self):
         for record in self:
@@ -74,7 +72,7 @@ class Agent(models.Model):
                 f'curl -fsSL "{base_url}/agent/get_script/bootstrap/sh" -o setup.sh && '
                 f"chmod +x setup.sh && "
                 f"./setup.sh "
-                f"--odoo-url \"{base_url}\" "
+                f'--odoo-url "{base_url}" '
                 f'--api-key "{record.api_key}"'
             )
 
@@ -90,7 +88,7 @@ class Agent(models.Model):
         return AgentService(self).check_health(self)
 
     def backup(self, with_dump=False):
-        return AgentService(self).backup(self, with_dump=with_dump)
+        return AgentService(self).backup(self, with_dump)
 
     def download_dump(self, production):
         return AgentService(self).download_dump(self, production=production)

@@ -18,7 +18,7 @@ func main() {
 		log.Fatal("API_KEY env var not set")
 	}
 
-	heartbeatTicker := time.NewTicker(30 * time.Second)
+	heartbeatTicker := time.NewTicker(5 * time.Second)
 	defer heartbeatTicker.Stop()
 
 	for {

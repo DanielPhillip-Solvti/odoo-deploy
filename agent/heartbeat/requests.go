@@ -4,20 +4,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"time"
 )
 
 type HeartbeatRequest struct {
-	JSONRPC string           `json:"jsonrpc"`
+	JSONRPC string    `json:"jsonrpc"`
 	Params  Heartbeat `json:"params"`
 }
 
 type HeartbeatResponse struct {
-	Status string            `json:"status"`
-	Message string            `json:"message"`
+	Status  string  `json:"status"`
+	Message string  `json:"message"`
 	Events  []Event `json:"events"`
+}
+
+type RPCResponse struct {
+	JSONRPC string            `json:"jsonrpc"`
+	ID      any               `json:"id"`
+	Result  HeartbeatResponse `json:"result"`
 }
 
 func outboundIP() (string, error) {
@@ -31,8 +39,8 @@ func outboundIP() (string, error) {
 
 func ExchangeHeartbeat(odooURL, apiKey string) error {
 	body, err := json.Marshal(HeartbeatRequest{
-		JSONRPC: "2.0",	
-		Params: BuildHeartbeat(),
+		JSONRPC: "2.0",
+		Params:  BuildHeartbeat(),
 	})
 
 	if err != nil {
@@ -52,17 +60,21 @@ func ExchangeHeartbeat(odooURL, apiKey string) error {
 		return fmt.Errorf("heartbeat request failed: %w", err)
 	}
 	defer resp.Body.Close()
+	body, _ = io.ReadAll(resp.Body)
+
+	log.Printf("Response body: %s\n", string(body))
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("heartbeat rejected: status %d", resp.StatusCode)
 	}
 
-	var rpcResp HeartbeatResponse
-	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
-		return fmt.Errorf("failed to decode heartbeat response: %w", err)
+	var rpcResp RPCResponse
+
+	if err := json.Unmarshal(body, &rpcResp); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return HandleEvents(odooURL, apiKey, rpcResp.Events)
+	return HandleEvents(odooURL, apiKey, rpcResp.Result.Events)
 }
 
 func SendEventCallback(odooURL, apiKey string, eventID int) error {

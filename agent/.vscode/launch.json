@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Agent with Env File",
+      "type": "go",
+      "request": "launch",
+      "mode": "exec",
+      "program": "${workspaceFolder}/build/agent",
+      "env": {
+        "ODOO_URL": "http://localhost:8169",
+        "API_KEY": "generated_api_key1"
+      },
+      "args": [],
+      "console": "integratedTerminal"
+    }
+  ]
+}

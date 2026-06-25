@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 
 GITHUB_API = "https://api.github.com"
 
+
 class Environment(models.Model):
     _name = "deploy.environment"
     _description = "Deployment Environment"
@@ -33,7 +34,7 @@ class Environment(models.Model):
     agent_id = fields.Many2one("deploy.agent", required=True, ondelete="cascade")
     repository_url = fields.Char(related="agent_id.repository_url")
     state = fields.Selection(
-        [("deploying", "Deploying"), ("active", "Active"), ("error", "Error"). ('inactive', 'Inactive')],
+        [("deploying", "Deploying"), ("active", "Active"), ("error", "Error"), ("inactive", "Inactive")],
         default="deploying",
         readonly=True,
     )
@@ -48,7 +49,8 @@ class Environment(models.Model):
         for record in self:
             if record.is_production:
                 existing_prod_env = self.search(
-                    [("agent_id", "=", record.agent_id.id), ("is_production", "=", True), ("id", "!=", record.id)], limit=1
+                    [("agent_id", "=", record.agent_id.id), ("is_production", "=", True), ("id", "!=", record.id)],
+                    limit=1,
                 )
                 if existing_prod_env:
                     raise UserError(_("Only one production environment is allowed per project."))
