@@ -15,14 +15,28 @@ type Event struct {
 	Parameters json.RawMessage `json:"parameters"`
 }
 
+type EventCallback struct {
+	EventID int    `json:"event_id"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
 func HandleEvents(odooURL, apiKey string, events []Event) error {
 	for _, event := range events {
 		_, err := HandleEvent(event)
 
 		if err != nil {
-			SendEventCallback(odooURL, apiKey, event.ID)
+			SendEventCallback(odooURL, apiKey, EventCallback{
+				EventID: event.ID,
+				Status:  "fail",
+				Message: err.Error(),
+			})
 		} else {
-			SendEventCallback(odooURL, apiKey, event.ID)
+			SendEventCallback(odooURL, apiKey, EventCallback{
+				EventID: event.ID,
+				Status:  "success",
+				Message: "Event handled successfully",
+			})
 		}
 	}
 	return nil

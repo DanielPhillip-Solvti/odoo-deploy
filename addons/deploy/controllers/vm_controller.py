@@ -25,30 +25,29 @@ class AgentController(http.Controller):
             return {"error": "Invalid API Key"}
 
         heartbeat_payload = HeartbeatPayload(**kwargs)
-        agent.sudo().write(
-            {
-                "last_heartbeat": fields.Datetime.now(),
-                "heartbeat_payload": heartbeat_payload.model_dump_json(),
-            }
-        )
+        self._apply_heartbeat(agent.sudo(), heartbeat_payload)
 
         events = agent.get_events(last_event_id=heartbeat_payload.last_event_id)
         return {"status": "success", "message": "Heartbeat received", "events": events}
 
-    @http.route("/agent/callback/<int:event_id>", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
-    def agent_event_callback(self, event_id, **kwargs: EventCallbackPayload):
+    @http.route("/agent/callback", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
+    def agent_event_callback(self, **kwargs: EventCallbackPayload):
         token = self._extract_api_key()
         agent = request.env["deploy.agent"].sudo().search([("api_key", "=", token)], limit=1)
         if not agent:
             return {"error": "Invalid API Key"}
 
-        event = agent.event_ids.filtered(lambda e: e.id == event_id)
         callback = EventCallbackPayload(**kwargs)
+        event = agent.event_ids.filtered(lambda e: e.id == callback.event_id)
 
         if not event:
-            _logger.warning(
-                f"event repsonse received: {event_id}. status: {callback.status}. message: {callback.message}"
-            )
+            _logger.warning(f"event not found for callback with event id: {callback.event_id}.")
+
+        _logger.info(
+            f"event response received: {callback.event_id}. status: {callback.status}. message: {callback.message}"
+        )
+
+        event.sudo().write({"status": callback.status, "message": callback.message})
 
         return {"status": "success"}
 
@@ -79,4 +78,12 @@ class AgentController(http.Controller):
             script_content,
             mimetype="text/plain",
             headers=[("Content-Disposition", f'attachment; filename="{filename}"')],
+        )
+
+    def _apply_heartbeat(self, agent, heartbeat_payload: HeartbeatPayload):
+        agent.sudo().write(
+            {
+                "last_heartbeat": fields.Datetime.now(),
+                "heartbeat_payload": heartbeat_payload.model_dump_json(),
+            }
         )

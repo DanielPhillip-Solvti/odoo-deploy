@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 
+
 class EnvironmentPayload(BaseModel):
     branch: str
     status: str
+
 
 class HeartbeatPayload(BaseModel):
     last_event_id: int | None
@@ -10,6 +12,8 @@ class HeartbeatPayload(BaseModel):
     production_branch: EnvironmentPayload
     staging_branches: list[EnvironmentPayload]
 
+
 class EventCallbackPayload(BaseModel):
+    event_id: int
     status: str
     message: str

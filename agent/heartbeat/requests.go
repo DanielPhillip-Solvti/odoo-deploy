@@ -28,6 +28,11 @@ type RPCResponse struct {
 	Result  HeartbeatResponse `json:"result"`
 }
 
+type EventCallbackRequest struct {
+	JSONRPC string        `json:"jsonrpc"`
+	Params  EventCallback `json:"params"`
+}
+
 func outboundIP() (string, error) {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -77,7 +82,35 @@ func ExchangeHeartbeat(odooURL, apiKey string) error {
 	return HandleEvents(odooURL, apiKey, rpcResp.Result.Events)
 }
 
-func SendEventCallback(odooURL, apiKey string, eventID int) error {
-	// TODO: Implement
+func SendEventCallback(odooURL, apiKey string, callback EventCallback) error {
+	body, err := json.Marshal(EventCallbackRequest{
+		JSONRPC: "2.0",
+		Params:  callback,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal event callback data: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest("POST", odooURL+"/agent/callback", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to build event callback request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("event callback request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ = io.ReadAll(resp.Body)
+
+	log.Printf("Event callback response body: %s\n", string(body))
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("event callback rejected: status %d", resp.StatusCode)
+	}
+
 	return nil
 }
