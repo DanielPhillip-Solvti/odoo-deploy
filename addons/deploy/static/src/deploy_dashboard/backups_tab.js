@@ -11,10 +11,12 @@ export class BackupsTab extends Component {
     };
 
     setup() {
+        this.orm = useService("orm");
         this.notification = useService("notification");
         this.state = useState({
             selected: null,
             downloading: false,
+            backingUp: false,
         });
 
         this.selectBackup = (filename) => {
@@ -72,6 +74,20 @@ export class BackupsTab extends Component {
                 this.notification.add(e?.data?.message || e?.message || "Failed to start download", {type: "danger"});
                 this.state.downloading = false;
             }
+        };
+
+        this.triggerBackup = async (withDump) => {
+            const agentId = this.props.agent?.id;
+            if (!agentId || this.state.backingUp) return;
+            this.state.backingUp = true;
+            try {
+                const method = withDump ? "backup_with_dump" : "backup_no_dump";
+                await this.orm.call("deploy.agent", method, [agentId]);
+                this.notification.add(`Backup${withDump ? " with dump" : ""} queued successfully.`, {type: "success"});
+            } catch (e) {
+                this.notification.add(e?.data?.message || e?.message || "Backup failed", {type: "danger"});
+            }
+            this.state.backingUp = false;
         };
     }
 

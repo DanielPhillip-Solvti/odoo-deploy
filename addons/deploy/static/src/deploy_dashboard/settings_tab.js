@@ -6,7 +6,7 @@ import {useService} from "@web/core/utils/hooks";
 export class SettingsTab extends Component {
     static template = "deploy.SettingsTab";
     static props = {
-        env: {type: Object},
+        env: {type: Object, optional: true},
         agent: {type: Object, optional: true},
     };
 

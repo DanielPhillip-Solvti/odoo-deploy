@@ -15,14 +15,6 @@ http://*.localhost/backup-ws/* {
     }
     respond @missing_token "Missing token" 401
 
-    rate_limit {
-        zone backup_ip {
-            key {remote_host}
-            events 3
-            window 1m
-        }
-    }
-
     reverse_proxy 127.0.0.1:9876 {
         header_up X-Backup-Token {query.token}
         transport http {

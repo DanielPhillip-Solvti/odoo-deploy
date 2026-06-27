@@ -36,6 +36,7 @@
             "deploy/static/src/deploy_dashboard/git_command_panel.xml",
             "deploy/static/src/deploy_dashboard/backups_tab.js",
             "deploy/static/src/deploy_dashboard/backups_tab.xml",
+            "deploy/static/src/deploy_dashboard/agent_form_controller.js",
             "deploy/static/src/deploy_dashboard/deploy_dashboard.scss",
         ],
     },

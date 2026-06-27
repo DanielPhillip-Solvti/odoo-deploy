@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
     <t t-name="deploy.SettingsTab">
         <div class="o_deploy_settings_tab">
-            <div class="card shadow-sm border-0 mb-3">
+            <div t-if="props.env" class="card shadow-sm border-0 mb-3">
                 <div class="card-header bg-white border-bottom">
                     <strong>
                         <i class="fa fa-gear me-2" />

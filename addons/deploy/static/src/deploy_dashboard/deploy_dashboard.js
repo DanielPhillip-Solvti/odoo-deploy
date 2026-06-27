@@ -18,7 +18,7 @@ export class DeployDashboard extends Component {
         this.state = useState({
             agent: null,
             environments: [],
-            selectedEnv: null,
+            selectedEnv: undefined,
             activeTab: "history",
             heartbeat: null,
             loading: true,
@@ -71,6 +71,9 @@ export class DeployDashboard extends Component {
         };
         this.selectTab = (tabId) => {
             this.state.activeTab = tabId;
+        };
+        this.defaultTab = () => {
+            return this.state.selectedEnv ? "history" : "backups";
         };
         this.undeployBranch = async (branch) => {
             const agentId = this.state.agent?.id;
@@ -139,7 +142,17 @@ export class DeployDashboard extends Component {
     }
 
     async _init() {
-        const agentId = this.props.action?.params?.agent_id || this.props.action?.context?.active_id || this._getAgentIdFromUrl();
+        let agentId = this.props.action?.params?.agent_id || this.props.action?.context?.active_id || this._getAgentIdFromUrl();
+        if (!agentId) {
+            try {
+                const agents = await this.orm.searchRead("deploy.agent", [], ["id"], {limit: 1});
+                if (agents.length > 0) {
+                    agentId = agents[0].id;
+                }
+            } catch (_e) {
+                // Silent
+            }
+        }
         if (!agentId) {
             this.state.loading = false;
             return;
@@ -184,7 +197,7 @@ export class DeployDashboard extends Component {
                 const envs = this._parseEnvironments(raw);
                 this.state.environments = envs;
                 const prod = envs.find((e) => e.is_production);
-                this.state.selectedEnv = prod || envs[0];
+                this.state.selectedEnv = prod || envs[0] || undefined;
             }
             this._loadUndeployedBranches(agentId);
         } catch (e) {
@@ -301,7 +314,7 @@ export class DeployDashboard extends Component {
                     state: e.status || "",
                 }))
                 .filter((e) => !this._pendingUndeploys.has(e.repository_branch));
-            if (!this.state.selectedEnv) {
+            if (!this.state.selectedEnv && this.state.environments.length > 0) {
                 const prod = this.state.environments.find((e) => e.is_production);
                 this.state.selectedEnv = prod || this.state.environments[0];
             }
