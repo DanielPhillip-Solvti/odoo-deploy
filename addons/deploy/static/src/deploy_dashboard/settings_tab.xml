@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="deploy.SettingsTab">
+        <div class="o_deploy_settings_tab">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white border-bottom">
+                    <strong>
+                        <i class="fa fa-gear me-2" />
+                        Environment Settings
+                    </strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label text-muted fw-bold">Branch</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" t-att-value="props.env.repository_branch" readonly="readonly" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label text-muted fw-bold">Odoo Version</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" t-att-value="props.env.odoo_version" readonly="readonly" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label text-muted fw-bold">Status</label>
+                        <div class="col-sm-9">
+                            <span
+                                t-att-class="'badge ' + (props.env.state === 'active' ? 'bg-success' : props.env.state === 'deploying' ? 'bg-warning text-dark' : props.env.state === 'error' ? 'bg-danger' : 'bg-secondary')"
+                            >
+                                <t t-esc="props.env.state" />
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label text-muted fw-bold">Production</label>
+                        <div class="col-sm-9">
+                            <t t-if="props.env.is_production">
+                                <span class="badge bg-success">Production</span>
+                            </t>
+                            <t t-else="">
+                                <span class="badge bg-secondary">Staging</span>
+                            </t>
+                        </div>
+                    </div>
+                    <hr />
+                    <p class="text-muted small mb-0">
+                        <i class="fa fa-info-circle me-1" />
+                        Environment settings are managed by the agent via heartbeat.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white border-bottom">
+                    <strong>
+                        <i class="fa fa-plug me-2" />
+                        Agent Connection
+                    </strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label text-muted fw-bold">WebSocket URL</label>
+                        <div class="col-sm-9">
+                            <t t-if="!state.editingWsUrl">
+                                <div class="d-flex align-items-center gap-2">
+                                    <code t-if="props.agent?.ws_url" t-esc="props.agent.ws_url" />
+                                    <span t-else="" class="text-muted fst-italic">Not configured</span>
+                                    <button class="btn btn-sm btn-outline-secondary ms-2" t-on-click="startEditWsUrl" title="Edit">
+                                        <i class="fa fa-pencil" />
+                                    </button>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        t-model="state.wsUrlInput"
+                                        placeholder="ws://localhost:9876/backup-ws"
+                                    />
+                                    <button class="btn btn-sm btn-primary" t-on-click="saveWsUrl" title="Save">
+                                        <i class="fa fa-check" />
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" t-on-click="cancelEditWsUrl" title="Cancel">
+                                        <i class="fa fa-times" />
+                                    </button>
+                                </div>
+                            </t>
+                            <div class="form-text text-muted small">
+                                Set to the agent's WebSocket endpoint. For local dev:
+                                <code>ws://localhost:9876/backup-ws</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div t-if="props.agent?.bootstrap_script" class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <strong>
+                        <i class="fa fa-terminal me-2" />
+                        Bootstrap Script
+                    </strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Run this command on the server to set up the agent:</p>
+                    <pre class="bg-light p-3 rounded mb-2" style="overflow-x: auto; font-size: 0.8rem;">
+                        <t t-esc="props.agent.bootstrap_script" />
+                    </pre>
+                    <button class="btn btn-sm btn-outline-secondary" t-on-click="copyScript" title="Copy to clipboard">
+                        <i class="fa fa-copy me-1" />
+                        Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

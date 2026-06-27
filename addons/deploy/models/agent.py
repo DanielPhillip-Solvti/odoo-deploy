@@ -1,6 +1,13 @@
-from odoo import api, fields, models
+import json
+import logging
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 from ..services.agent_service import AgentService
+from ..services.github_service import GitHubService
+
+_logger = logging.getLogger(__name__)
 
 
 class Agent(models.Model):
@@ -9,12 +16,14 @@ class Agent(models.Model):
 
     name = fields.Char(required=True)
     api_key = fields.Obscure(readonly=True)
-    production_environment_id = fields.Many2one("deploy.environment", readonly=True)
-    staging_environment_ids = fields.One2many("deploy.environment", "agent_id", domain=[("is_production", "=", False)])
     bootstrap_script = fields.Text(compute="_compute_bootstrap_script", readonly=True)
     repository_url = fields.Char(
-        required=True,
-        help="Git repository URL for the Odoo deployment including branch or tag if necessary",
+        readonly=True,
+        help="Git repository URL. Set by the agent during bootstrap.",
+    )
+    ws_url = fields.Char(
+        help="WebSocket URL for backup downloads."
+        "Example: wss://example.com/backup-ws or ws://localhost:9876/backup-ws for local dev.",
     )
 
     last_heartbeat = fields.Datetime()
@@ -34,7 +43,7 @@ class Agent(models.Model):
                 record.status = "offline"
             else:
                 time_since_last_heartbeat = fields.Datetime.now() - record.last_heartbeat
-                if time_since_last_heartbeat.total_seconds() > 300:  # 5 minutes threshold
+                if time_since_last_heartbeat.total_seconds() > 300:
                     record.status = "offline"
                 else:
                     record.status = "active"
@@ -83,22 +92,203 @@ class Agent(models.Model):
             record.generate_api_key()
         return result
 
+    def _deployed_branches_from_heartbeat(self):
+        """Return the set of deployed branch names from the heartbeat payload."""
+        deployed = set()
+        payload = self.heartbeat_payload
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                return deployed
+        if isinstance(payload, dict):
+            pb = payload.get("production_branch") or {}
+            if pb.get("branch"):
+                deployed.add(pb["branch"])
+            for sb in payload.get("staging_branches") or []:
+                if sb.get("branch"):
+                    deployed.add(sb["branch"])
+        return deployed
+
+    def action_open_dashboard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.client",
+            "tag": "deploy.dashboard",
+            "params": {"agent_id": self.id},
+        }
+
+    def get_undeployed_branches(self):
+        self.ensure_one()
+        try:
+            all_branches = GitHubService(self.env, self.repository_url).list_branches()
+        except Exception as e:
+            _logger.warning("Failed to get undeployed branches: %s", e)
+            return []
+        deployed = self._deployed_branches_from_heartbeat()
+        return [b for b in all_branches if b not in deployed]
+
+    def deploy_branch(self, branch, is_production=False):
+        self.ensure_one()
+        event = AgentService(self).deploy(branch, is_production)
+        return {"event_id": event.id}
+
+    def undeploy_branch(self, branch):
+        self.ensure_one()
+        event = AgentService(self).undeploy(branch)
+        return {"event_id": event.id}
+
+    def get_github_commits(self, branch):
+        self.ensure_one()
+        return GitHubService(self.env, self.repository_url).get_github_commits(branch)
+
+    def get_git_commands(self, branch):
+        self.ensure_one()
+        repo_url = self.repository_url or ""
+        branch = branch or ""
+        return [
+            {"key": "clone", "label": "Clone", "icon": "fa-copy", "command": f"git clone {repo_url}"},
+            {
+                "key": "fork",
+                "label": "Fork",
+                "icon": "fa-code-fork",
+                "command": f"gh repo fork {repo_url} --clone=false",
+            },
+            {
+                "key": "merge",
+                "label": "Merge",
+                "icon": "fa-code-merge",
+                "command": f"git checkout {branch} && git pull origin {branch}",
+            },
+            {"key": "ssh", "label": "SSH", "icon": "fa-terminal", "command": f"ssh -t deploy@{branch}.local"},
+            {
+                "key": "sql",
+                "label": "SQL",
+                "icon": "fa-database",
+                "command": f"docker exec -it $(docker ps -q -f name={branch}) psql -U odoo -d {branch}",
+            },
+            {
+                "key": "submodule",
+                "label": "Submodule",
+                "icon": "fa-puzzle-piece",
+                "command": "git submodule update --init --recursive",
+            },
+            {"key": "delete", "label": "Delete", "icon": "fa-trash", "command": f"odoosh deploy destroy {branch}"},
+        ]
+
+    def _broadcast_heartbeat_via_bus(self):
+        self.ensure_one()
+        payload = self.heartbeat_payload
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                return
+        if not isinstance(payload, dict):
+            return
+        pb = payload.get("production_branch") or {}
+        sbs = payload.get("staging_branches") or []
+        envs = []
+        if pb.get("branch"):
+            envs.append(
+                {
+                    "branch": pb["branch"],
+                    "odoo_version": pb.get("odoo_version", ""),
+                    "status": pb.get("status", ""),
+                    "is_production": True,
+                }
+            )
+        for sb in sbs:
+            if sb.get("branch"):
+                envs.append(
+                    {
+                        "branch": sb["branch"],
+                        "odoo_version": sb.get("odoo_version", ""),
+                        "status": sb.get("status", ""),
+                        "is_production": False,
+                    }
+                )
+        self.env["bus.bus"]._sendone(
+            f"deploy_agent_{self.id}",
+            "deploy.heartbeat",
+            {
+                "agent_id": self.id,
+                "agent_name": self.name,
+                "status": self.status,
+                "last_heartbeat": str(self.last_heartbeat) if self.last_heartbeat else None,
+                "environments": envs,
+                "backups": payload.get("backups", []),
+            },
+        )
+
     # Agent Actions ----------------------------------
     def check_health(self):
         return AgentService(self).check_health(self)
 
-    def backup(self, with_dump=False):
-        return AgentService(self).backup(self, with_dump)
+    def backup(self, with_dump=False, branch=None):
+        if with_dump:
+            payload = self.heartbeat_payload
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except (json.JSONDecodeError, TypeError):
+                    payload = {}
+            prod_branch = (payload or {}).get("production_branch", {}).get("branch")
+            if not branch or branch != prod_branch:
+                raise UserError(_("Dump backup is only allowed on the production branch"))
+        return AgentService(self).backup(with_dump, branch)
 
     def download_dump(self, production):
-        return AgentService(self).download_dump(self, production=production)
+        return AgentService(self).download_dump(production)
+
+    def request_download_token(self, filename):
+        self.ensure_one()
+        import secrets
+
+        token = secrets.token_hex(32)
+        expiry = fields.Datetime.add(fields.Datetime.now(), seconds=60)
+        self.env["deploy.download_token"].create(
+            {
+                "token": token,
+                "agent_id": self.id,
+                "filename": filename,
+                "expiry": expiry,
+            }
+        )
+        return {"token": token, "ws_url": self.ws_url or ""}
+
+    # Branch Actions ----------------------------------
+    def deploy(self, branch, is_production=False):
+        return AgentService(self).deploy(branch, is_production)
+
+    def undeploy(self, branch):
+        return AgentService(self).undeploy(branch)
+
+    def restore_backup(self, branch):
+        return AgentService(self).restore_backup(branch)
+
+    def reset_branch(self, branch):
+        return AgentService(self).reset_branch(branch)
+
+    def update_module(self, branch, module_name):
+        return AgentService(self).update_module(branch, module_name)
+
+    def stream_logs(self, branch):
+        return AgentService(self).stream_logs(branch)
 
     # buttons
     def backup_no_dump(self):
         return self.backup(with_dump=False)
 
     def backup_with_dump(self):
-        return self.backup(with_dump=True)
+        payload = self.heartbeat_payload
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                payload = {}
+        branch = (payload or {}).get("production_branch", {}).get("branch") if payload else None
+        return self.backup(with_dump=True, branch=branch)
 
     def download_production_dump(self):
         return self.download_dump(production=True)

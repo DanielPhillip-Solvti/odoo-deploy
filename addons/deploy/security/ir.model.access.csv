@@ -1,8 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_agent_user,access_agent_user,model_deploy_agent,base.group_user,1,0,0,0
 access_agent_admin,access_agent_admin,model_deploy_agent,base.group_system,1,1,1,1
-access_env_user,access_env_user,model_deploy_environment,base.group_user,1,0,0,0
-access_env_admin,access_env_admin,model_deploy_environment,base.group_system,1,1,1,1
-access_event_user,access_event_user,model_deploy_event,base.group_user,1,0,0,0
+access_event_user,access_event_user,model_deploy_event,base.group_user,1,1,1,0
 access_event_admin,access_event_admin,model_deploy_event,base.group_system,1,1,1,1
+access_download_token_user,access_download_token_user,model_deploy_download_token,base.group_user,1,1,1,0
 access_github_app_config_user,access_github_app_config_user,model_github_app_config,base.group_user,1,1,1,1

@@ -1,14 +1,15 @@
 ACTIONS = [
-    ('deploy', 'Deploy'),
-    ('undeploy', 'Undeploy'),
-    ('backup', 'Backup'),
-    ('restore_backup', 'Restore Backup'),
-    ('reset_branch', 'Reset Branch'),
-    ('update_module', 'Update Module'),
-    ('download_dump', 'Download Dump'),
-    ('stream_logs', 'Stream Logs'),
+    ("deploy", "Deploy"),
+    ("undeploy", "Undeploy"),
+    ("backup", "Backup"),
+    ("restore_backup", "Restore Backup"),
+    ("reset_branch", "Reset Branch"),
+    ("update_module", "Update Module"),
+    ("download_dump", "Download Dump"),
+    ("stream_logs", "Stream Logs"),
 ]
-    
+
+
 class AgentService:
     def __init__(self, agent):
         agent.ensure_one()
@@ -18,20 +19,25 @@ class AgentService:
         if action not in [a[0] for a in ACTIONS]:
             raise ValueError(f"Invalid action: {action}")
 
-        self.agent.env['deploy.event'].create({
-            'agent_id': self.agent.id,
-            'action': action,
-            'parameters': parameters or {},
-        })
+        return self.agent.env["deploy.event"].create(
+            {
+                "agent_id": self.agent.id,
+                "action": action,
+                "parameters": parameters or {},
+            }
+        )
 
     def deploy(self, branch, is_production):
-        return self.queue_action("deploy", {"branch": branch, 'is_production': is_production})
+        return self.queue_action("deploy", {"branch": branch, "is_production": is_production})
 
     def undeploy(self, branch):
         return self.queue_action("undeploy", {"branch": branch})
 
-    def backup(self, with_dump):
-        return self.queue_action("backup", {"with_dump": with_dump})
+    def backup(self, with_dump, branch=None):
+        params = {"with_dump": with_dump}
+        if branch:
+            params["branch"] = branch
+        return self.queue_action("backup", params)
 
     def restore_backup(self, branch):
         return self.queue_action("restore_backup", {"branch": branch})

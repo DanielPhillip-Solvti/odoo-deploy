@@ -1,8 +1,6 @@
 from odoo import _, fields, models
 from odoo.exceptions import UserError
 
-from ..services.github_service import GitHubService
-
 
 class GitHubAppConfig(models.Model):
     _name = "github.app.config"
@@ -19,7 +17,3 @@ class GitHubAppConfig(models.Model):
 
     def unlink(self):
         raise UserError(_("Deletion of GitHub App Config is not allowed. Please edit the existing record."))
-
-    def _get_installation_token(self):
-        """Generate a short-lived installation token for the GitHub App."""
-        return GitHubService().get_installation_token(self)

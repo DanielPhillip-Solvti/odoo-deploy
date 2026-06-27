@@ -1,0 +1,149 @@
+/* Agent Dashboard — Odoo theme */
+
+.o_deploy_dashboard {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    .o_branches_view {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+
+        @media (min-width: 992px) {
+            flex-direction: row;
+        }
+
+        .o_sh_panel_left {
+            min-width: 260px;
+            width: 100%;
+
+            @media (min-width: 992px) {
+                width: 260px;
+            }
+
+            .o_env_searchbar {
+                .form-control:focus {
+                    box-shadow: none;
+                }
+            }
+
+            .o_env_listing {
+                .o_stage {
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                }
+
+                .o_env_item {
+                    cursor: pointer;
+                    transition: background-color 0.15s ease;
+                    border-left: 3px solid transparent;
+
+                    &:hover {
+                        background-color: rgba(0, 0, 0, 0.03);
+                    }
+
+                    &.o_env_item_active {
+                        background-color: rgba(0, 0, 0, 0.05);
+                        border-left-color: var(--o-primary, #017e84);
+                    }
+
+                    i.fa-circle,
+                    i.fa-circle-o {
+                        font-size: 0.625rem;
+                    }
+                }
+            }
+        }
+
+        .o_sh_panel_right {
+            .o_env_header {
+                min-height: 48px;
+            }
+
+            .o_deploy_tabs {
+                overflow-x: auto;
+                overflow-y: hidden;
+
+                .nav-item {
+                    margin-bottom: 0;
+
+                    .nav-link {
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                        border-radius: 0;
+                        padding: 0.5rem 1rem;
+                    }
+                }
+            }
+
+            .o_deploy_tab_content {
+                background-color: #f5f5f5;
+            }
+        }
+    }
+}
+
+/* Git command bar buttons — Odoo light theme */
+.o_branch_buttons .btn {
+    color: rgba(0, 0, 0, 0.6);
+
+    &:hover {
+        color: black;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    &.active {
+        color: var(--o-primary, #017e84);
+    }
+}
+
+.bg-100 {
+    background-color: #f5f5f5 !important;
+}
+
+.bg-200 {
+    background-color: #e9ecef !important;
+}
+
+/* Drag-and-drop zones */
+.o_env_drop_zone {
+    transition: background-color 0.15s ease;
+    border: 2px dashed transparent;
+    border-radius: 4px;
+    margin: 0 4px;
+    padding: 0 4px;
+    min-height: 2px;
+
+    &:empty {
+        min-height: 2rem;
+    }
+
+    &.o_env_drag_over {
+        background-color: rgba(0, 126, 132, 0.05);
+        border-color: var(--o-primary, #017e84);
+    }
+}
+
+/* Pending deploy items */
+.o_env_pending {
+    opacity: 0.7;
+}
+
+/* Undeployed branch items */
+.o_env_undeployed {
+    cursor: grab;
+    color: rgba(0, 0, 0, 0.65);
+
+    &:active {
+        cursor: grabbing;
+    }
+
+    &.o_env_deploying {
+        cursor: default;
+        opacity: 0.6;
+    }
+}

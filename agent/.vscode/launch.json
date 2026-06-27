@@ -9,7 +9,10 @@
       "program": "${workspaceFolder}/build/agent",
       "env": {
         "ODOO_URL": "http://localhost:8169",
-        "API_KEY": "generated_api_key1"
+        "API_KEY": "generated_api_key1",
+        "REPO_URL": "https://github.com/DanielPhillip-Solvti/odoo-deploy",
+        "HEARTBEAT_FILE": "${workspaceFolder}/build/heartbeat.json",
+        "WS_PORT": "9876"
       },
       "args": [],
       "console": "integratedTerminal"

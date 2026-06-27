@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="deploy.EnvPanel">
+        <div class="o_deploy_env_panel o_sh_panel_left h-lg-100 flex-shrink-0 d-flex flex-column">
+            <div class="o_env_searchbar border-bottom d-flex align-items-center px-3 py-2">
+                <i class="fa fa-search text-muted me-2" />
+                <input type="text" class="form-control form-control-sm bg-light border-0" placeholder="Filter environments..." />
+            </div>
+            <div class="o_env_listing flex-grow-1 overflow-auto">
+                <!-- Production heading -->
+                <div class="o_stage px-3 pe-2 mt-4 pb-2 d-flex align-items-center">
+                    <span class="flex-grow-1 small text-uppercase text-muted">Production</span>
+                </div>
+                <!-- Production drop zone (below heading) -->
+                <div
+                    class="o_env_drop_zone"
+                    t-att-class="state.dragOverTarget === 'production' ? 'o_env_drag_over' : ''"
+                    t-on-dragover="(e) => _onDragOver(e, 'production')"
+                    t-on-dragleave="(e) => _onDragLeave(e, 'production')"
+                    t-on-drop="(e) => _onDrop(e, true)"
+                >
+                    <t t-if="props.envs.prod">
+                        <div
+                            class="o_env_item py-1 px-2 d-flex align-items-center"
+                            t-att-class="props.selected?.id === props.envs.prod.id ? 'o_env_item_active' : ''"
+                            t-on-click="() => props.onSelect(props.envs.prod)"
+                        >
+                            <span class="text-truncate flex-grow-1 ps-1">
+                                <t t-esc="props.envs.prod.repository_branch" />
+                            </span>
+                            <small class="text-muted me-2">
+                                <t t-esc="props.envs.prod.odoo_version" />
+                            </small>
+                            <t t-if="props.envs.prod.state === 'active'">
+                                <i class="fa fa-circle text-success" />
+                            </t>
+                            <t t-elif="props.envs.prod.state === 'deploying'">
+                                <i class="fa fa-circle text-warning" />
+                            </t>
+                            <t t-elif="props.envs.prod.state === 'error'">
+                                <i class="fa fa-circle text-danger" />
+                            </t>
+                            <t t-else="">
+                                <i class="fa fa-circle-o text-muted" />
+                            </t>
+                        </div>
+                    </t>
+                    <t t-if="props.pendingProduction">
+                        <div class="o_env_item o_env_pending py-1 px-2 d-flex align-items-center">
+                            <i class="fa fa-spinner fa-spin me-2 text-muted" />
+                            <span class="text-truncate flex-grow-1 ps-1">
+                                <t t-esc="props.pendingProduction" />
+                            </span>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Staging heading -->
+                <div class="o_stage px-3 pe-2 mt-4 pb-2 d-flex align-items-center">
+                    <span class="flex-grow-1 small text-uppercase text-muted">Staging</span>
+                </div>
+                <!-- Staging drop zone (below heading) -->
+                <div
+                    class="o_env_drop_zone"
+                    t-att-class="state.dragOverTarget === 'staging' ? 'o_env_drag_over' : ''"
+                    t-on-dragover="(e) => _onDragOver(e, 'staging')"
+                    t-on-dragleave="(e) => _onDragLeave(e, 'staging')"
+                    t-on-drop="(e) => _onDrop(e, false)"
+                >
+                    <t t-foreach="props.envs.staging" t-as="env" t-key="env.id">
+                        <div
+                            class="o_env_item py-1 px-2 d-flex align-items-center"
+                            t-att-class="props.selected?.id === env.id ? 'o_env_item_active' : ''"
+                            t-on-click="() => props.onSelect(env)"
+                        >
+                            <span class="text-truncate flex-grow-1 ps-1">
+                                <t t-esc="env.repository_branch" />
+                            </span>
+                            <small class="text-muted me-2">
+                                <t t-esc="env.odoo_version" />
+                            </small>
+                            <t t-if="env.state === 'active'">
+                                <i class="fa fa-circle text-success" />
+                            </t>
+                            <t t-elif="env.state === 'deploying'">
+                                <i class="fa fa-circle text-warning" />
+                            </t>
+                            <t t-elif="env.state === 'error'">
+                                <i class="fa fa-circle text-danger" />
+                            </t>
+                            <t t-else="">
+                                <i class="fa fa-circle-o text-muted" />
+                            </t>
+                        </div>
+                    </t>
+                    <t t-foreach="props.pendingStaging" t-as="branch" t-key="branch">
+                        <div class="o_env_item o_env_pending py-1 px-2 d-flex align-items-center">
+                            <i class="fa fa-spinner fa-spin me-2 text-muted" />
+                            <span class="text-truncate flex-grow-1 ps-1">
+                                <t t-esc="branch" />
+                            </span>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Undeployed -->
+                <t t-if="props.undeployedBranches?.length">
+                    <div class="o_stage px-3 pe-2 mt-4 pb-2 d-flex align-items-center">
+                        <span class="flex-grow-1 small text-uppercase text-muted">Undeployed</span>
+                    </div>
+                    <t t-foreach="props.undeployedBranches" t-as="branch" t-key="branch">
+                        <div
+                            class="o_env_item o_env_undeployed py-1 px-2 d-flex align-items-center"
+                            draggable="true"
+                            t-on-dragstart="(e) => _onDragStart(e, branch)"
+                        >
+                            <i class="fa fa-ellipsis-h me-2 text-muted" />
+                            <span class="text-truncate flex-grow-1 ps-1">
+                                <t t-esc="branch" />
+                            </span>
+                        </div>
+                    </t>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

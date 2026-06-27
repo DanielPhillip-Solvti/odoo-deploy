@@ -49,6 +49,31 @@ class AgentController(http.Controller):
 
         event.sudo().write({"status": callback.status, "message": callback.message})
 
+        try:
+            request.env["bus.bus"]._sendone(
+                f"deploy_agent_{agent.id}",
+                "deploy.event_callback",
+                {
+                    "event_id": callback.event_id,
+                    "status": callback.status,
+                    "message": callback.message,
+                    "branch": event.parameters.get("branch") if event.parameters else None,
+                },
+            )
+        except Exception:
+            _logger.warning("Failed to broadcast event callback via bus", exc_info=True)
+
+        return {"status": "success"}
+
+    @http.route("/agent/update_config", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
+    def agent_update_config(self, **kwargs):
+        token = self._extract_api_key()
+        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", token)], limit=1)
+        if not agent:
+            return {"error": "Invalid API Key"}
+        repo_url = kwargs.get("repository_url")
+        if repo_url:
+            agent.sudo().write({"repository_url": repo_url})
         return {"status": "success"}
 
     @http.route(
@@ -80,10 +105,46 @@ class AgentController(http.Controller):
             headers=[("Content-Disposition", f'attachment; filename="{filename}"')],
         )
 
-    def _apply_heartbeat(self, agent, heartbeat_payload: HeartbeatPayload):
-        agent.sudo().write(
-            {
-                "last_heartbeat": fields.Datetime.now(),
-                "heartbeat_payload": heartbeat_payload.model_dump_json(),
-            }
+    @http.route("/agent/backup/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
+    def request_backup_token(self, **kwargs):
+        agent_id = kwargs.get("agent_id")
+        filename = kwargs.get("filename")
+        if not agent_id or not filename:
+            return {"error": "Missing agent_id or filename"}
+
+        agent = request.env["deploy.agent"].browse(agent_id)
+        if not agent.exists():
+            return {"error": "Agent not found"}
+
+        return agent.request_download_token(filename)
+
+    @http.route("/agent/validate_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
+    def validate_download_token(self, **kwargs):
+        api_key = self._extract_api_key()
+        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
+        if not agent:
+            return {"valid": False, "filename": ""}
+
+        download_token_value = kwargs.get("token")
+        if not download_token_value:
+            return {"valid": False, "filename": ""}
+
+        download_token = (
+            request.env["deploy.download_token"].sudo().search([("token", "=", download_token_value)], limit=1)
         )
+
+        if not download_token or not download_token.is_valid():
+            return {"valid": False, "filename": ""}
+
+        download_token.mark_used()
+        return {"valid": True, "filename": download_token.filename}
+
+    def _apply_heartbeat(self, agent, heartbeat_payload: HeartbeatPayload):
+        vals = {
+            "last_heartbeat": fields.Datetime.now(),
+            "heartbeat_payload": heartbeat_payload.model_dump(),
+        }
+        if heartbeat_payload.repo_url:
+            vals["repository_url"] = heartbeat_payload.repo_url
+        agent.sudo().write(vals)
+        agent.sudo()._broadcast_heartbeat_via_bus()

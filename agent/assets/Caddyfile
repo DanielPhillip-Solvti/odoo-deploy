@@ -1,0 +1,33 @@
+# Global configuration block
+{
+    email admin@example.com
+}
+
+# Basic placeholder catch-all route over HTTP
+:80 {
+    respond "Infrastructure initialized. Deploy environments via Odoo to map domains." 200
+}
+
+# Backup WebSocket - tightly locked route
+http://*.localhost/backup-ws/* {
+    @missing_token {
+        not query token=*
+    }
+    respond @missing_token "Missing token" 401
+
+    rate_limit {
+        zone backup_ip {
+            key {remote_host}
+            events 3
+            window 1m
+        }
+    }
+
+    reverse_proxy 127.0.0.1:9876 {
+        header_up X-Backup-Token {query.token}
+        transport http {
+            read_timeout 5m
+            write_timeout 5m
+        }
+    }
+}

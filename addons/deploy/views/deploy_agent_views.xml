@@ -6,6 +6,9 @@
             <form string="Client Project Dashboard" class="o_deploy_agent_form">
                 <header>
                     <field name="status" widget="statusbar" statusbar_visible="offline,pending,active,error" />
+                    <button name="action_open_dashboard" type="object" string="Dashboard" class="btn-secondary">
+                        <i class="fa fa-tachometer" title="Open Agent Dashboard" />
+                    </button>
                 </header>
 
                 <sheet>
@@ -47,26 +50,30 @@
 
                     <!-- Main Tabbed Interface Configuration -->
                     <notebook>
-                        <!-- Tab 1: Server Branches -->
+                        <!-- Tab 1: Branches & Builds Dashboard -->
                         <page string="Branches &amp; Builds" name="branches_tab" icon="fa-code-branch">
-                            <div class="p-2">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 class="m-0 fw-semibold text-muted">Active Server Branch Environments</h5>
+                            <div class="p-3">
+                                <div class="alert alert-info d-flex align-items-center gap-3" role="alert">
+                                    <i class="fa fa-tachometer fa-2x" />
+                                    <div>
+                                        <h6 class="alert-heading m-0 fw-bold">Dashboard View</h6>
+                                        <p class="m-0 small">
+                                            Branch environments are now powered by live agent heartbeat data.
+                                            Use the Dashboard button above for a full real-time overview.
+                                        </p>
+                                    </div>
                                 </div>
-                                <field name="staging_environment_ids" mode="list">
-                                    <list string="Active Branches" edit="false" create="true">
-                                        <field name="repository_branch" decoration-bf="1" />
-                                        <field name="odoo_version" widget="badge" decoration-info="1" />
-                                        <field name="is_production" widget="boolean_toggle" string="Production" />
-                                        <field
-                                            name="state"
-                                            widget="badge"
-                                            decoration-success="state == 'active'"
-                                            decoration-warning="state == 'deploying'"
-                                            decoration-danger="state == 'error'"
-                                        />
-                                    </list>
-                                </field>
+                                <div class="text-center mt-4">
+                                    <button
+                                        name="action_open_dashboard"
+                                        type="object"
+                                        string="Open Dashboard"
+                                        class="btn btn-primary btn-lg"
+                                    >
+                                        <i class="fa fa-tachometer me-2" />
+                                        Open Dashboard
+                                    </button>
+                                </div>
                             </div>
                         </page>
 
@@ -167,7 +174,7 @@
                                 <h5 class="fw-semibold mb-4">Network Credentials &amp; Key Settings</h5>
                                 <group>
                                     <group string="Specifications Settings">
-                                        <field name="repository_url" widget="CopyClipboardChar" string="Target Repository URL" />
+                                        <field name="repository_url" widget="CopyClipboardChar" readonly="1" string="Repository URL" />
                                     </group>
                                 </group>
                             </div>

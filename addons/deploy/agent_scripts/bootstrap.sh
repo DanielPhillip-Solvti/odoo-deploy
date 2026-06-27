@@ -18,6 +18,7 @@ fi
 # -----------------------------
 ODOO_URL=""
 API_KEY=""
+REPO_URL=""
 POSTGRES_USER=odoo
 POSTGRES_PASSWORD=odoo
 
@@ -27,6 +28,8 @@ while [[ $# -gt 0 ]]; do
       ODOO_URL="$2"; shift 2 ;;
     --api-key)
       API_KEY="$2"; shift 2 ;;
+    --repo-url)
+      REPO_URL="$2"; shift 2 ;;
     *)
       echo "❌ Unknown parameter: $1"
       exit 1 ;;
@@ -48,6 +51,40 @@ if [[ -z "$POSTGRES_USER" || -z "$POSTGRES_PASSWORD" ]]; then
 fi
 
 # -----------------------------
+# REPOSITORY PROMPT
+# -----------------------------
+if [[ -z "$REPO_URL" ]]; then
+    echo ""
+    echo "📦 No repository URL provided."
+    echo "   Enter the Git repository URL for this deployment."
+    echo "   Example: https://github.com/my-org/my-repo"
+    echo ""
+    read -r -p "Repository URL: " REPO_URL
+    echo ""
+fi
+
+if [[ -z "$REPO_URL" ]]; then
+    echo "❌ Repository URL is required."
+    exit 1
+fi
+
+# -----------------------------
+# SEND REPO URL TO ODOO
+# -----------------------------
+echo "📤 Sending repository URL to Odoo..."
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "$ODOO_URL/agent/update_config" \
+    -H "Authorization: Bearer $API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"call\",\"params\":{\"repository_url\":\"$REPO_URL\"}}")
+
+if [[ "$HTTP_CODE" != "200" ]]; then
+    echo "⚠️  Failed to update repository URL on Odoo (HTTP $HTTP_CODE). You can set it manually in the agent form."
+else
+    echo "✅ Repository URL registered with Odoo."
+fi
+
+# -----------------------------
 # CONFIG
 # -----------------------------
 TARGET_DIR="/data/deploy-agent"
@@ -62,15 +99,15 @@ sudo chown -R "$USER:$USER" "$TARGET_DIR"
 cd "$TARGET_DIR"
 
 # -----------------------------
-# FETCH RUNTIME ASSETS
+# FETCH AGENT BINARY & EXTRACT ASSETS
 # -----------------------------
-echo "⬇️ Downloading runtime configuration files..."
+# fetch release https://github.com/DanielPhillip-Solvti/odoo-deploy-agent/releases/tag/v1.0.0
+echo "⬇️ Downloading agent binary..."
+curl -L https://github.com/DanielPhillip-Solvti/odoo-deploy/releases/download/v1.0.0/agent -o "$TARGET_DIR/agent"
+chmod +x "$TARGET_DIR/agent"
 
-curl -fsSL "$ODOO_URL/agent/get_script/docker-compose/yml" -o docker-compose.yml
-curl -fsSL "$ODOO_URL/agent/get_script/Caddyfile/0" -o Caddyfile
-curl -fsSL "$ODOO_URL/agent/get_script/login/sh" -o login.sh
-
-chmod +x login.sh
+echo "📂 Extracting runtime assets (scripts, Caddyfile, docker-compose.yml)..."
+"$TARGET_DIR/agent" --extract-assets "$TARGET_DIR"
 
 # -----------------------------
 # ENV CONFIG
@@ -81,6 +118,7 @@ cat > .env <<EOF
 # Agent Config
 ODOO_URL=$ODOO_URL
 API_KEY=$API_KEY
+REPO_URL=$REPO_URL
 
 # Database Config
 POSTGRES_USER=$POSTGRES_USER
@@ -121,12 +159,7 @@ if docker compose ps | grep -q "Exit"; then
 fi
 
 # -----------------------------
-# Agent
+# START AGENT
 # -----------------------------
-# fetch release https://github.com/DanielPhillip-Solvti/odoo-deploy-agent/releases/tag/v1.0.0
-curl -L https://github.com/DanielPhillip-Solvti/odoo-deploy/releases/download/v1.0.0/agent -o $TARGET_DIR/agent
-chmod +x $TARGET_DIR/agent
-
-# start agent (TODO: run as service)
-set -a && . $TARGET_DIR/.env
-$TARGET_DIR/agent
+set -a && . "$TARGET_DIR/.env"
+"$TARGET_DIR/agent"

@@ -1,12 +1,31 @@
 package heartbeat
 
 import (
-	"agent/actions"
+	"agent/helpers"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
+
+type ActionDef struct {
+	ScriptName     string
+	RequiredParams []string
+}
+
+var actionMap = map[string]ActionDef{
+	"deploy":         {ScriptName: "deploy.sh", RequiredParams: []string{"branch", "is_production"}},
+	"undeploy":       {ScriptName: "undeploy.sh", RequiredParams: []string{"branch"}},
+	"backup":         {ScriptName: "backup.sh", RequiredParams: []string{}},
+	"restore_backup": {ScriptName: "restore_backup.sh", RequiredParams: []string{"branch"}},
+	"reset_branch":   {ScriptName: "reset_branch.sh", RequiredParams: []string{"branch"}},
+	"update_module":  {ScriptName: "update_module.sh", RequiredParams: []string{"branch", "module_name"}},
+	"download_dump":  {ScriptName: "download_dump.sh", RequiredParams: []string{"is_production"}},
+	"stream_logs":    {ScriptName: "stream_logs.sh", RequiredParams: []string{"branch"}},
+}
 
 type Event struct {
 	ID         int             `json:"id"`
@@ -23,7 +42,7 @@ type EventCallback struct {
 
 func HandleEvents(odooURL, apiKey string, events []Event) error {
 	for _, event := range events {
-		_, err := HandleEvent(event)
+		msg, err := HandleEvent(event)
 
 		if err != nil {
 			SendEventCallback(odooURL, apiKey, EventCallback{
@@ -35,70 +54,45 @@ func HandleEvents(odooURL, apiKey string, events []Event) error {
 			SendEventCallback(odooURL, apiKey, EventCallback{
 				EventID: event.ID,
 				Status:  "success",
-				Message: "Event handled successfully",
+				Message: msg,
 			})
 		}
 	}
 	return nil
 }
 
-// ACTIONS = [
-//     ('deploy', 'Deploy'),
-//     ('undeploy', 'Undeploy'),
-//     ('backup', 'Backup'),
-//     ('restore_backup', 'Restore Backup'),
-//     ('reset_branch', 'Reset Branch'),
-//     ('update_module', 'Update Module'),
-//     ('download_dump', 'Download Dump'),
-//     ('stream_logs', 'Stream Logs'),
-// ]
-
 func HandleEvent(event Event) (string, error) {
-	switch event.Action {
-	case "deploy":
-		var params actions.DeployParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		log.Printf("Handling deploy event with parameters: %+v\n", params)
-		return actions.Deploy(params)
-	case "undeploy":
-		var params actions.UndeployParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		log.Printf("Handling undeploy event with parameters: %+v\n", params)
-		return actions.Undeploy(params)
-	case "backup":
-		var params actions.BackupParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		log.Printf("Handling backup event with parameters: %+v\n", params)
-		return actions.Backup(params)
-	case "restore_backup":
-		var params actions.RestoreBackupParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		return actions.RestoreBackup(params)
-	case "reset_branch":
-		var params actions.ResetBranchParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		return actions.ResetBranch(params)
-	case "update_module":
-		var params actions.UpdateModuleParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		return actions.UpdateModule(params)
-	case "download_dump":
-		var params actions.DownloadDumpParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		return actions.DownloadDump(params)
-	case "stream_logs":
-		var params actions.StreamLogsParams
-		json.Unmarshal(event.Parameters, &params)
-		params.Validate()
-		return actions.StreamLogs(params)
-	default:
+	def, ok := actionMap[event.Action]
+	if !ok {
 		return "", fmt.Errorf("unknown action: %s", event.Action)
 	}
+
+	var params map[string]any
+	if err := json.Unmarshal(event.Parameters, &params); err != nil {
+		return "", fmt.Errorf("failed to parse parameters for action %s: %w", event.Action, err)
+	}
+
+	for _, key := range def.RequiredParams {
+		if _, found := params[key]; !found {
+			return "", fmt.Errorf("missing required parameter '%s' for action %s", key, event.Action)
+		}
+	}
+
+	scriptsDir := filepath.Join(filepath.Dir(os.Args[0]), "scripts")
+
+	env := os.Environ()
+	for k, v := range params {
+		envKey := strings.ToUpper(k)
+		envVal := fmt.Sprintf("%v", v)
+		env = append(env, envKey+"="+envVal)
+	}
+
+	scriptPath := filepath.Join(scriptsDir, def.ScriptName)
+	log.Printf("Running %s for action %s (event %d)", scriptPath, event.Action, event.ID)
+
+	out, err := helpers.RunCmdWithEnv(env, "bash", scriptPath)
+	if err != nil {
+		return out, fmt.Errorf("action %s failed: %w", event.Action, err)
+	}
+	return strings.TrimSpace(out), nil
 }

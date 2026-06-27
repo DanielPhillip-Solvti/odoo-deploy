@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <templates xml:space="preserve">
-    <t t-name="deploy.GithubCommitHistory">
-        <div class="o_github_commit_history">
+    <t t-name="deploy.HistoryTab">
+        <div class="o_deploy_history_tab container-fluid px-0">
             <!-- Loading -->
             <t t-if="state.status === 'loading'">
                 <div class="d-flex align-items-center gap-2 text-muted py-3">
@@ -18,7 +18,11 @@
             <!-- Not authenticated -->
             <t t-elif="state.status === 'not_authenticated'">
                 <div class="d-flex flex-column align-items-start gap-2 py-3">
-                    <p class="mb-1">Configure a github app to allow commit history.</p>
+                    <p class="mb-1">Configure a GitHub App to allow commit history.</p>
+                    <a class="btn btn-sm btn-primary" href="#">
+                        <i class="fa fa-github me-1" />
+                        Configure GitHub
+                    </a>
                 </div>
             </t>
 
@@ -37,25 +41,57 @@
             <!-- Loaded -->
             <t t-elif="state.status === 'loaded'">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold">
-                        Last
-                        <t t-esc="state.commits.length" />
-                        commits
+                    <span class="small text-muted" t-if="state.baseBranch &amp;&amp; state.branch">
+                        <t t-esc="state.branch" />
+                        <i class="fa fa-long-arrow-right mx-1" />
+                        <t t-esc="state.baseBranch" />
+                        <span class="ms-2">
+                            <t t-esc="state.aheadBy" />
+                            ahead
+                            <t t-if="state.behindBy">
+                                ·
+                                <t t-esc="state.behindBy" />
+                                behind
+                            </t>
+                        </span>
                     </span>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-secondary" t-on-click="reload">
                             <i class="fa fa-refresh me-1" />
                             Refresh
                         </button>
+                        <a
+                            t-if="props.agent?.repository_url"
+                            t-att-href="props.agent.repository_url"
+                            target="_blank"
+                            class="btn btn-sm btn-outline-secondary"
+                        >
+                            <i class="fa fa-github me-1" />
+                            GitHub
+                        </a>
                     </div>
                 </div>
+
+                <!-- Merge base (divergence point) -->
+                <t t-if="state.mergeBaseCommit">
+                    <div class="small text-muted bg-100 border rounded p-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="fa fa-code-fork" />
+                        <span>Diverged from</span>
+                        <a t-att-href="state.mergeBaseCommit.url" target="_blank" class="font-monospace text-decoration-none">
+                            <t t-esc="state.mergeBaseCommit.sha" />
+                        </a>
+                        <span class="text-truncate">
+                            <t t-esc="state.mergeBaseCommit.message" />
+                        </span>
+                    </div>
+                </t>
 
                 <t t-if="state.commits.length === 0">
                     <p class="text-muted">No commits found for this branch.</p>
                 </t>
                 <t t-else="">
-                    <table class="table table-sm table-hover o_github_commits_table">
-                        <thead>
+                    <table class="table table-sm table-hover o_deploy_commits_table bg-white border">
+                        <thead class="bg-200">
                             <tr>
                                 <th>SHA</th>
                                 <th>Message</th>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="deploy.GitCommandPanel">
+        <div class="o_branch_header_right ps-0 d-none col-lg-7 col-xl-6 d-lg-flex flex-wrap justify-content-end align-content-center">
+            <div class="card bg-light w-100 mb-0 mt-2 rounded-3 overflow-hidden">
+                <div class="o_branch_buttons btn-group rounded-top">
+                    <button
+                        t-foreach="state.commands"
+                        t-as="cmd"
+                        t-key="cmd.key"
+                        class="btn flex-grow-0 py-1 text-nowrap shadow-none border-bottom-0 border-0 rounded-0"
+                        t-att-class="cmd.key === state.selected ? 'active' : ''"
+                        t-on-click="() => select(cmd.key)"
+                    >
+                        <i t-attf-class="me-1 fa {{cmd.icon}}" />
+                        <small>
+                            <t t-esc="cmd.label" />
+                        </small>
+                    </button>
+                </div>
+                <div class="o_git_command flex-grow-1 w-100 input-group">
+                    <button type="button" class="text-nowrap btn btn-sm py-0 bg-200 rounded-0 border-0" t-on-click="copy">
+                        <span class="mx-1 fa fa-clipboard" />
+                    </button>
+                    <input
+                        type="text"
+                        class="js_git_command form-control form-control-sm border-0 font-monospace bg-white"
+                        readonly="readonly"
+                        t-att-value="currentCommand"
+                    />
+                    <div class="d-flex" />
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="deploy.EnvContent">
+        <div class="o_deploy_env_content o_sh_panel_right h-lg-100 flex-grow-1 d-flex flex-column bg-white" style="min-width: 0;">
+            <t t-if="!props.env">
+                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                    <p>Select an environment from the left panel.</p>
+                </div>
+            </t>
+            <t t-else="">
+                <!-- Branch Header -->
+                <div class="o_env_header border-bottom px-3 py-2">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="d-flex align-items-center gap-2">
+                            <span
+                                t-att-class="'d-inline-block rounded-circle ' + (
+                                    props.agent?.status === 'active' ? 'bg-success' :
+                                    props.agent?.status === 'error' ? 'bg-danger' :
+                                    'bg-secondary'
+                                )"
+                                style="width: 10px; height: 10px;"
+                                t-att-title="'Agent status: ' + (props.agent?.status || 'unknown') + (props.agent?.last_heartbeat ? ' | Last heartbeat: ' + props.agent?.last_heartbeat : '')"
+                                role="status"
+                            />
+                            <div>
+                                <div class="fw-bold" style="font-size: 1.1rem;">
+                                    <t t-esc="props.agent?.name" />
+                                </div>
+                                <div class="small text-muted">
+                                    <t t-esc="props.env.repository_branch" />
+                                </div>
+                            </div>
+                        </div>
+                        <GitCommandPanel env="props.env" agent="props.agent" />
+                    </div>
+                </div>
+
+                <!-- Tab Bar -->
+                <ul class="o_deploy_tabs nav nav-tabs flex-nowrap d-flex flex-shrink-0 border-bottom bg-light px-2" role="tablist">
+                    <li
+                        t-foreach="props.tabs"
+                        t-as="tab"
+                        t-key="tab.id"
+                        class="nav-item text-uppercase"
+                        t-att-class="tab.id === props.activeTab ? 'active' : ''"
+                    >
+                        <a
+                            class="nav-link px-3 btn btn-sm d-flex align-items-center shadow-none border-0 rounded-0"
+                            t-on-click.prevent="() => props.onSelectTab(tab.id)"
+                        >
+                            <i t-attf-class="fa {{tab.icon}} me-1 d-none d-md-inline" />
+                            <t t-esc="tab.label" />
+                        </a>
+                    </li>
+                    <li class="nav-item ms-auto">
+                        <button
+                            class="nav-link btn btn-sm d-flex align-items-center shadow-none border-0 rounded-0 text-danger"
+                            t-on-click="undeploy"
+                            title="Undeploy this branch"
+                        >
+                            <i class="fa fa-trash me-1" />
+                            <span class="d-none d-md-inline">Undeploy</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="o_deploy_tab_content flex-grow-1 overflow-auto bg-100 p-3">
+                    <HistoryTab t-if="props.activeTab === 'history'" env="props.env" agent="props.agent" />
+                    <LogsTab t-if="props.activeTab === 'logs'" env="props.env" />
+                    <ShellTab t-if="props.activeTab === 'shell'" env="props.env" agent="props.agent" />
+                    <MonitorTab t-if="props.activeTab === 'monitor'" env="props.env" heartbeat="props.heartbeat" />
+                    <BackupsTab t-if="props.activeTab === 'backups'" agent="props.agent" />
+                    <SettingsTab t-if="props.activeTab === 'settings'" env="props.env" agent="props.agent" />
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

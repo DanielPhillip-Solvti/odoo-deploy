@@ -1,5 +1,13 @@
 package heartbeat
 
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
 type EnvironmentStatus string
 
 const (
@@ -10,27 +18,68 @@ const (
 )
 
 type EnvironmentState struct {
-	Branch string            `json:"branch"`
-	Status EnvironmentStatus `json:"status"`
+	OdooVersion string            `json:"odoo_version"`
+	Branch      string            `json:"branch"`
+	Status      EnvironmentStatus `json:"status"`
 }
 
 type Heartbeat struct {
-	LastEventID          int              `json:"last_event_id"`
-	RepoURL              string           `json:"repo_url"`
-	ProductionBranch     EnvironmentState `json:"production_branch"`
-	StagingBranches      []EnvironmentState `json:"staging_branches"`
+	LastEventID      int                `json:"last_event_id"`
+	RepoURL          string             `json:"repo_url"`
+	ProductionBranch EnvironmentState   `json:"production_branch"`
+	StagingBranches  []EnvironmentState `json:"staging_branches"`
+	Backups          []string           `json:"backups"`
+}
+
+func scanBackups(binaryDir string) []string {
+	backupsDir := filepath.Join(binaryDir, "backups")
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		return []string{}
+	}
+	var backups []string
+	for _, e := range entries {
+		if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dump") || strings.HasSuffix(e.Name(), "_neutralised.dump")) {
+			backups = append(backups, e.Name())
+		}
+	}
+	sort.Strings(backups)
+	return backups
 }
 
 func BuildHeartbeat() Heartbeat {
-	// TODO: implement
-	// check local services on docker to build accurate heartbeat
-	return Heartbeat{
-		LastEventID: 0,
-		RepoURL:     "new repo",
-		ProductionBranch: EnvironmentState{
-			Branch: "main",
-			Status: EnvironmentStatusActive,
-		},
-		StagingBranches: []EnvironmentState{},
+	heartbeatFile := os.Getenv("HEARTBEAT_FILE")
+	if heartbeatFile == "" {
+		heartbeatFile = "/data/deploy-agent/heartbeat.json"
 	}
+
+	data, err := os.ReadFile(heartbeatFile)
+	if err != nil {
+		repoURL := os.Getenv("REPO_URL")
+		return Heartbeat{
+			LastEventID:      0,
+			RepoURL:          repoURL,
+			ProductionBranch: EnvironmentState{},
+			StagingBranches:  []EnvironmentState{},
+			Backups:          []string{},
+		}
+	}
+
+	var hb Heartbeat
+	if err := json.Unmarshal(data, &hb); err != nil {
+		return Heartbeat{}
+	}
+
+	if hb.RepoURL == "" {
+		hb.RepoURL = os.Getenv("REPO_URL")
+	}
+
+	if hb.StagingBranches == nil {
+		hb.StagingBranches = []EnvironmentState{}
+	}
+
+	binaryDir := filepath.Dir(os.Args[0])
+	hb.Backups = scanBackups(binaryDir)
+
+	return hb
 }
