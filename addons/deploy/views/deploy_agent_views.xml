@@ -1,4 +1,65 @@
 <odoo>
+    <record id="deploy_agent_kanban_view" model="ir.ui.view">
+        <field name="name">deploy.agent.kanban</field>
+        <field name="model">deploy.agent</field>
+        <field name="arch" type="xml">
+            <kanban class="o_deploy_agent_kanban" action="deploy.action_deploy_dashboard" type="action">
+                <field name="name" />
+                <field name="repository_url" />
+                <field name="status" />
+                <field name="last_heartbeat" />
+                <field name="heartbeat_payload" />
+                <templates>
+                    <t t-name="card" class="flex-column">
+                        <main class="p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex flex-column" style="min-width: 0;">
+                                    <field name="name" class="fw-bold" style="font-size: 1.05rem;" />
+                                    <div t-if="record.repository_url.raw_value" class="text-muted text-truncate small">
+                                        <field name="repository_url" />
+                                    </div>
+                                </div>
+                                <span
+                                    t-att-class="'d-inline-block rounded-circle flex-shrink-0 ms-2 ' + (
+                                        record.status.raw_value === 'active' ? 'bg-success' :
+                                        record.status.raw_value === 'error' ? 'bg-danger' :
+                                        'bg-secondary'
+                                    )"
+                                    style="width: 14px; height: 14px;"
+                                    role="status"
+                                />
+                            </div>
+                            <div t-if="record.last_heartbeat.raw_value" class="small text-muted mt-2">
+                                <i class="fa fa-clock-o me-1" title="Last heartbeat" />
+                                <field name="last_heartbeat" />
+                            </div>
+                            <div t-else="" class="small text-warning mt-2">
+                                <i class="fa fa-exclamation-triangle me-1" title="No heartbeat" />
+                                No heartbeat yet
+                            </div>
+                            <div t-if="record.heartbeat_payload.raw_value" class="mt-2 d-flex gap-2 flex-wrap">
+                                <span t-if="record.heartbeat_payload.raw_value.backups?.length" class="small text-muted">
+                                    <i class="fa fa-database me-1" title="Backups" />
+                                    <t t-esc="record.heartbeat_payload.raw_value.backups.length" />
+                                    backup(s)
+                                </span>
+                                <t
+                                    t-set="env_count"
+                                    t-value="(record.heartbeat_payload.raw_value.production_branch?.branch ? 1 : 0) + (record.heartbeat_payload.raw_value.staging_branches?.length || 0)"
+                                />
+                                <span t-if="env_count" class="badge bg-light text-dark border">
+                                    <i class="fa fa-code-fork me-1" title="Environments" />
+                                    <t t-esc="env_count" />
+                                    env(s)
+                                </span>
+                            </div>
+                        </main>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
     <record id="deploy_agent_tree_view" model="ir.ui.view">
         <field name="name">deploy.agent.tree</field>
         <field name="model">deploy.agent</field>

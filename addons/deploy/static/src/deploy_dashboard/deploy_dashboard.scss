@@ -129,6 +129,26 @@
     opacity: 0.7;
 }
 
+/* Agent Kanban cards */
+.o_deploy_agent_kanban {
+    .o_kanban_record {
+        margin-bottom: 0;
+    }
+
+    .o_deploy_agent_card {
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+        &:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            transform: translateY(-2px);
+        }
+
+        .bg-light.border {
+            font-size: 0.8rem;
+        }
+    }
+}
+
 /* Undeployed branch items */
 .o_env_undeployed {
     cursor: grab;
