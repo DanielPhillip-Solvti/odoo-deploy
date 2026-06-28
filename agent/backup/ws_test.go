@@ -16,18 +16,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// mockOdoo simulates /agent/validate_token (JSON-RPC).
-// It accepts a fixed token "valid-token" and returns the given filename.
+// mockOdoo simulates /agent/validate_ws_token (JSON-RPC).
+// It accepts a fixed token "valid-token" and returns the given filename in params.
 type mockOdoo struct {
 	server        *httptest.Server
 	filename      string
-	validationHit bool // set true when validate_token is called
+	validationHit bool
 }
 
 func newMockOdoo(filename string) *mockOdoo {
 	m := &mockOdoo{filename: filename}
 	m.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Accept any API key
 		body, _ := io.ReadAll(r.Body)
 		var req struct {
 			JSONRPC string `json:"jsonrpc"`
@@ -40,29 +39,27 @@ func newMockOdoo(filename string) *mockOdoo {
 		m.validationHit = true
 		valid := req.Params.Token == "valid-token"
 
-		resp := struct {
-			JSONRPC string      `json:"jsonrpc"`
-			Result  interface{} `json:"result"`
+		params, _ := json.Marshal(map[string]string{"filename": m.filename})
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(struct {
+			JSONRPC string `json:"jsonrpc"`
+			Result  struct {
+				Valid   bool            `json:"valid"`
+				Purpose string          `json:"purpose"`
+				Params  json.RawMessage `json:"params"`
+			} `json:"result"`
 		}{
 			JSONRPC: "2.0",
 			Result: struct {
-				Valid    bool   `json:"valid"`
-				Filename string `json:"filename"`
+				Valid   bool            `json:"valid"`
+				Purpose string          `json:"purpose"`
+				Params  json.RawMessage `json:"params"`
 			}{
-				Valid:    valid,
-				Filename: m.filename,
+				Valid:   valid,
+				Purpose: "backup",
+				Params:  params,
 			},
-		}
-
-		if !valid {
-			resp.Result = struct {
-				Valid    bool   `json:"valid"`
-				Filename string `json:"filename"`
-			}{Valid: false, Filename: ""}
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		})
 	}))
 	return m
 }

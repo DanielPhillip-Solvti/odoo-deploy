@@ -4,41 +4,25 @@ import (
 	"agent/backup"
 	"agent/heartbeat"
 	"agent/logs"
+	"agent/reconciler"
 	"agent/shell"
+	"agent/state"
+	"context"
 	"embed"
 	"flag"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
 //go:embed all:assets
 var assetsFS embed.FS
-
-func extractSubDir(base embed.FS, src, dst string) error {
-	if !strings.HasSuffix(src, "/") {
-		src += "/"
-	}
-	return fs.WalkDir(base, strings.TrimSuffix(src, "/"), func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		relPath := strings.TrimPrefix(path, src)
-		dstPath := filepath.Join(dst, relPath)
-		if d.IsDir() {
-			return os.MkdirAll(dstPath, 0755)
-		}
-		data, err := base.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(dstPath, data, 0755)
-	})
-}
 
 func extractAll(base embed.FS, dst string) error {
 	return fs.WalkDir(base, "assets", func(path string, d fs.DirEntry, err error) error {
@@ -90,45 +74,60 @@ func main() {
 		wsPort = "9876"
 	}
 
-	backupHandler := &backup.Handler{
+	repoURL := os.Getenv("REPO_URL")
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	agentState := state.New(repoURL)
+	eventCh := make(chan heartbeat.Event, 100)
+
+	// Goroutine 1: HTTP / WebSocket server
+	mux := http.NewServeMux()
+	mux.Handle("/backup-ws", &backup.Handler{
 		OdooURL:   odooURL,
 		APIKey:    apiKey,
 		BinaryDir: binaryDir,
-	}
-
-	logsHandler := &logs.Handler{
+	})
+	mux.Handle("/logs-ws", &logs.Handler{
 		OdooURL: odooURL,
 		APIKey:  apiKey,
-	}
-
-	shellHandler := &shell.Handler{
+	})
+	mux.Handle("/shell-ws", &shell.Handler{
 		OdooURL: odooURL,
 		APIKey:  apiKey,
+	})
+
+	srv := &http.Server{
+		Addr:    "0.0.0.0:" + wsPort,
+		Handler: mux,
 	}
 
 	go func() {
-		mux := http.NewServeMux()
-		mux.Handle("/backup-ws", backupHandler)
-		mux.Handle("/logs-ws", logsHandler)
-		mux.Handle("/shell-ws", shellHandler)
 		log.Printf("WebSocket server listening on :%s", wsPort)
-		if err := http.ListenAndServe("0.0.0.0:"+wsPort, mux); err != nil {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("WS server error: %v", err)
 		}
 	}()
 
-	heartbeatTicker := time.NewTicker(5 * time.Second)
-	defer heartbeatTicker.Stop()
+	// Goroutine 2: State reconciler — inspects Docker + backups every 15s
+	go reconciler.Run(ctx, agentState, binaryDir)
 
-	for {
-		select {
-		case <-heartbeatTicker.C:
-			err := heartbeat.ExchangeHeartbeat(odooURL, apiKey)
-			if err != nil {
-				log.Printf("Error sending heartbeat: %v", err)
-			} else {
-				log.Println("Heartbeat sent successfully")
-			}
-		}
+	// Goroutine 3: Heartbeat sender — health check every 30s
+	go heartbeat.Sender(ctx, agentState, odooURL, apiKey)
+
+	// Goroutine 4: Event poller — lightweight poll every 100ms–2s
+	go heartbeat.Poller(ctx, agentState, odooURL, apiKey, eventCh)
+
+	// Goroutine 5: Event processor — runs scripts, sends callbacks + immediate heartbeat
+	go heartbeat.Processor(ctx, agentState, odooURL, apiKey, binaryDir, eventCh)
+
+	<-ctx.Done()
+	log.Println("Shutting down...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
 	}
 }

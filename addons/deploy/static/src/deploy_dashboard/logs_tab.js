@@ -68,9 +68,10 @@ export class LogsTab extends Component {
         this.state.streaming = true;
         this.state.lines = [];
         try {
-            const result = await rpc("/agent/logs/token", {
+            const result = await rpc("/agent/ws/token", {
                 agent_id: agentId,
-                branch,
+                purpose: "logs",
+                params: {branch},
             });
 
             if (result.error) {

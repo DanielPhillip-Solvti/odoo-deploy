@@ -1,5 +1,6 @@
 import json
 import logging
+import secrets
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -22,8 +23,7 @@ class Agent(models.Model):
         help="Git repository URL. Set by the agent during bootstrap.",
     )
     ws_url = fields.Char(
-        help="WebSocket URL for backup downloads."
-        "Example: wss://example.com/backup-ws or ws://localhost:9876/backup-ws for local dev.",
+        help="Agent WebSocket base URL. Example: wss://example.com or ws://localhost:9876",
     )
 
     last_heartbeat = fields.Datetime()
@@ -57,7 +57,7 @@ class Agent(models.Model):
 
     def generate_api_key(self):
         self.ensure_one()
-        self.api_key = "generated_api_key" + str(self.id)
+        self.api_key = secrets.token_urlsafe(32)
 
     def _compute_bootstrap_script(self):
         for record in self:
@@ -93,21 +93,14 @@ class Agent(models.Model):
         return result
 
     def _deployed_branches_from_heartbeat(self):
-        """Return the set of deployed branch names from the heartbeat payload."""
         deployed = set()
-        payload = self.heartbeat_payload
-        if isinstance(payload, str):
-            try:
-                payload = json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                return deployed
-        if isinstance(payload, dict):
-            pb = payload.get("production_branch") or {}
-            if pb.get("branch"):
-                deployed.add(pb["branch"])
-            for sb in payload.get("staging_branches") or []:
-                if sb.get("branch"):
-                    deployed.add(sb["branch"])
+        payload = self._parse_heartbeat()
+        pb = payload.get("production_branch") or {}
+        if pb.get("branch"):
+            deployed.add(pb["branch"])
+        for sb in payload.get("staging_branches") or []:
+            if sb.get("branch"):
+                deployed.add(sb["branch"])
         return deployed
 
     def action_open_dashboard(self):
@@ -178,13 +171,8 @@ class Agent(models.Model):
 
     def _broadcast_heartbeat_via_bus(self):
         self.ensure_one()
-        payload = self.heartbeat_payload
-        if isinstance(payload, str):
-            try:
-                payload = json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                return
-        if not isinstance(payload, dict):
+        payload = self._parse_heartbeat()
+        if not payload:
             return
         pb = payload.get("production_branch") or {}
         sbs = payload.get("staging_branches") or []
@@ -222,34 +210,30 @@ class Agent(models.Model):
         )
 
     # Agent Actions ----------------------------------
-    def check_health(self):
-        return AgentService(self).check_health(self)
-
     def backup(self, with_dump=False, branch=None):
         if with_dump:
-            payload = self.heartbeat_payload
-            if isinstance(payload, str):
-                try:
-                    payload = json.loads(payload)
-                except (json.JSONDecodeError, TypeError):
-                    payload = {}
+            payload = self._parse_heartbeat()
             prod_branch = (payload or {}).get("production_branch", {}).get("branch")
             if not branch or branch != prod_branch:
                 raise UserError(_("Dump backup is only allowed on the production branch"))
         return AgentService(self).backup(with_dump, branch)
 
-    def download_dump(self, production):
-        return AgentService(self).download_dump(production)
+    def _parse_heartbeat(self):
+        payload = self.heartbeat_payload
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return payload if isinstance(payload, dict) else {}
 
     def request_ws_token(self, purpose, params=None):
         self.ensure_one()
-        import secrets
 
         token = secrets.token_hex(32)
         expiry = fields.Datetime.add(fields.Datetime.now(), seconds=60)
-        path_map = {"backup": "/backup-ws", "logs": "/logs-ws", "shell": "/shell-ws"}
-        base = (self.ws_url or "ws://localhost:9876/backup-ws").replace("/backup-ws", "") or "ws://localhost:9876"
-        ws_url = f"{base}{path_map.get(purpose, '/ws')}"
+        base = (self.ws_url or "").rstrip("/") or "ws://localhost:9876"
+        ws_url = f"{base}/{purpose}-ws"
 
         self.env["deploy.ws_token"].create(
             {
@@ -261,12 +245,6 @@ class Agent(models.Model):
             }
         )
         return {"token": token, "ws_url": ws_url}
-
-    def request_download_token(self, filename):
-        return self.request_ws_token("backup", {"filename": filename})
-
-    def request_log_token(self, branch):
-        return self.request_ws_token("logs", {"branch": branch})
 
     # Branch Actions ----------------------------------
     def deploy(self, branch, is_production=False):
@@ -284,25 +262,11 @@ class Agent(models.Model):
     def update_module(self, branch, module_name):
         return AgentService(self).update_module(branch, module_name)
 
-    def stream_logs(self, branch):
-        return AgentService(self).stream_logs(branch)
-
     # buttons
     def backup_no_dump(self):
         return self.backup(with_dump=False)
 
     def backup_with_dump(self):
-        payload = self.heartbeat_payload
-        if isinstance(payload, str):
-            try:
-                payload = json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                payload = {}
-        branch = (payload or {}).get("production_branch", {}).get("branch") if payload else None
+        payload = self._parse_heartbeat()
+        branch = payload.get("production_branch", {}).get("branch") if payload else None
         return self.backup(with_dump=True, branch=branch)
-
-    def download_production_dump(self):
-        return self.download_dump(production=True)
-
-    def download_neutralised_dump(self):
-        return self.download_dump(production=False)

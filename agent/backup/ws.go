@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"agent/helpers"
 	"agent/token"
 
 	"github.com/gorilla/websocket"
@@ -27,7 +28,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vr, err := token.ValidateToken(h.OdooURL, h.APIKey, tok)
+	vr, err := token.ValidateToken(r.Context(), h.OdooURL, h.APIKey, tok)
 	if err != nil || !vr.Valid || vr.Purpose != "backup" {
 		log.Printf("Backup token validation failed: %v", err)
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
@@ -55,7 +56,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upgrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
+		CheckOrigin: helpers.CheckOrigin,
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

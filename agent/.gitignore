@@ -1,0 +1,8 @@
+build/
+.env
+agent
+*.exe
+*.test
+*.out
+__pycache__/
+.ruff_cache/

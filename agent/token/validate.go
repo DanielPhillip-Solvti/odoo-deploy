@@ -2,6 +2,7 @@ package token
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,14 +20,14 @@ type validateRPCResult struct {
 	Result ValidateResponse `json:"result"`
 }
 
-func ValidateToken(odooURL, apiKey, tokenValue string) (ValidateResponse, error) {
+func ValidateToken(ctx context.Context, odooURL, apiKey, tokenValue string) (ValidateResponse, error) {
 	body, _ := json.Marshal(map[string]any{
 		"jsonrpc": "2.0",
 		"params":  map[string]string{"token": tokenValue},
 	})
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("POST", odooURL+"/agent/validate_ws_token", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", odooURL+"/agent/validate_ws_token", bytes.NewReader(body))
 	if err != nil {
 		return ValidateResponse{}, err
 	}

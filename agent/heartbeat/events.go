@@ -40,28 +40,9 @@ type EventCallback struct {
 	Message string `json:"message"`
 }
 
-func HandleEvents(odooURL, apiKey string, events []Event) error {
-	for _, event := range events {
-		msg, err := HandleEvent(event)
+var HandleEvent = handleEvent
 
-		if err != nil {
-			SendEventCallback(odooURL, apiKey, EventCallback{
-				EventID: event.ID,
-				Status:  "fail",
-				Message: err.Error(),
-			})
-		} else {
-			SendEventCallback(odooURL, apiKey, EventCallback{
-				EventID: event.ID,
-				Status:  "success",
-				Message: msg,
-			})
-		}
-	}
-	return nil
-}
-
-func HandleEvent(event Event) (string, error) {
+func handleEvent(event Event) (string, error) {
 	def, ok := actionMap[event.Action]
 	if !ok {
 		return "", fmt.Errorf("unknown action: %s", event.Action)

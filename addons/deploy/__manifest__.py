@@ -43,7 +43,9 @@
         ],
     },
     "depends": ["obscure_field", "bus"],
+    "external_dependencies": {
+        "python": ["cryptography", "pydantic", "requests"],
+    },
     "installable": True,
     "application": True,
-    "reusable": True,
 }

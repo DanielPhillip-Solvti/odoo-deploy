@@ -30,6 +30,15 @@ class AgentController(http.Controller):
         events = agent.get_events(last_event_id=heartbeat_payload.last_event_id)
         return {"status": "success", "message": "Heartbeat received", "events": events}
 
+    @http.route("/agent/events", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
+    def agent_poll_events(self, **kwargs):
+        token = self._extract_api_key()
+        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", token)], limit=1)
+        if not agent:
+            return {"error": "Invalid API Key"}
+        events = agent.get_events(last_event_id=kwargs.get("last_event_id"))
+        return {"events": events}
+
     @http.route("/agent/callback", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def agent_event_callback(self, **kwargs: EventCallbackPayload):
         token = self._extract_api_key()
@@ -105,6 +114,18 @@ class AgentController(http.Controller):
             headers=[("Content-Disposition", f'attachment; filename="{filename}"')],
         )
 
+    @http.route("/agent/logs/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
+    def action_get_logs_token(self, **kwargs):
+        kwargs["purpose"] = "logs"
+        kwargs["params"] = {"branch": kwargs.get("branch")}
+        return self.request_ws_token(**kwargs)
+
+    @http.route("/agent/backup/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
+    def action_get_backup_token(self, **kwargs):
+        kwargs["purpose"] = "backup"
+        kwargs["params"] = {"filename": kwargs.get("filename")}
+        return self.request_ws_token(**kwargs)
+
     @http.route("/agent/ws/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
     def request_ws_token(self, **kwargs):
         agent_id = kwargs.get("agent_id")
@@ -137,70 +158,16 @@ class AgentController(http.Controller):
         ws_token.mark_used()
         return {"valid": True, "purpose": ws_token.purpose, "params": ws_token.params}
 
-    # Backward-compat wrappers -------------------------------------------------
-
-    @http.route("/agent/backup/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
-    def request_backup_token(self, **kwargs):
-        agent_id = kwargs.get("agent_id")
-        filename = kwargs.get("filename")
-        if not agent_id or not filename:
-            return {"error": "Missing agent_id or filename"}
-        agent = request.env["deploy.agent"].browse(agent_id)
-        if not agent.exists():
-            return {"error": "Agent not found"}
-        return agent.request_download_token(filename)
-
-    @http.route("/agent/logs/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
-    def request_log_token(self, **kwargs):
-        agent_id = kwargs.get("agent_id")
-        branch = kwargs.get("branch")
-        if not agent_id or not branch:
-            return {"error": "Missing agent_id or branch"}
-        agent = request.env["deploy.agent"].browse(agent_id)
-        if not agent.exists():
-            return {"error": "Agent not found"}
-        return agent.request_log_token(branch)
-
-    @http.route("/agent/validate_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
-    def validate_download_token(self, **kwargs):
-        api_key = self._extract_api_key()
-        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
-        if not agent:
-            return {"valid": False, "filename": ""}
-        download_token_value = kwargs.get("token")
-        if not download_token_value:
-            return {"valid": False, "filename": ""}
-        download_token = (
-            request.env["deploy.download_token"].sudo().search([("token", "=", download_token_value)], limit=1)
-        )
-        if not download_token or not download_token.is_valid():
-            return {"valid": False, "filename": ""}
-        download_token.mark_used()
-        return {"valid": True, "filename": download_token.filename}
-
-    @http.route("/agent/validate_log_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
-    def validate_log_token(self, **kwargs):
-        api_key = self._extract_api_key()
-        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
-        if not agent:
-            return {"valid": False, "branch": ""}
-        token_value = kwargs.get("token")
-        if not token_value:
-            return {"valid": False, "branch": ""}
-        stream_token = request.env["deploy.stream_token"].sudo().search([("token", "=", token_value)], limit=1)
-        if not stream_token or not stream_token.is_valid():
-            return {"valid": False, "branch": ""}
-        stream_token.mark_used()
-        return {"valid": True, "branch": stream_token.branch}
-
     def _apply_heartbeat(self, agent, heartbeat_payload: HeartbeatPayload):
-        vals = {
-            "last_heartbeat": fields.Datetime.now(),
-            "heartbeat_payload": heartbeat_payload.model_dump(),
-        }
-        if heartbeat_payload.repo_url:
+        vals = {"last_heartbeat": fields.Datetime.now()}
+        new_payload = heartbeat_payload.model_dump()
+        payload_changed = new_payload != agent.heartbeat_payload
+        if payload_changed:
+            vals["heartbeat_payload"] = new_payload
+        if heartbeat_payload.repo_url and heartbeat_payload.repo_url != agent.repository_url:
             vals["repository_url"] = heartbeat_payload.repo_url
-        if heartbeat_payload.ws_url:
+        if heartbeat_payload.ws_url and heartbeat_payload.ws_url != agent.ws_url:
             vals["ws_url"] = heartbeat_payload.ws_url
         agent.sudo().write(vals)
-        agent.sudo()._broadcast_heartbeat_via_bus()
+        if payload_changed:
+            agent.sudo()._broadcast_heartbeat_via_bus()

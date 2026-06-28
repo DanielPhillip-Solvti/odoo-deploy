@@ -1,17 +1,8 @@
-import re
-
 from odoo import fields as odoo_fields
 from odoo.tools.misc import SENTINEL
 
 
 class Obscure(odoo_fields.Text):
-    """Text-compatible field that hides its value in ORM read payloads.
-
-    The real value remains available to server-side Python code through
-    ``record.field_name``. RPC/read/export responses only receive the placeholder.
-    This is intentionally not encryption; it only prevents browser/network leaks.
-    """
-
     type = "text"
     obscure = True
     obscure_placeholder = "******"
@@ -25,8 +16,7 @@ class Obscure(odoo_fields.Text):
         return self.obscure_placeholder if value else False
 
     def _is_obscured_value(self, value):
-        obscured_value_re = re.compile(r"^\*+$")
-        return isinstance(value, str) and bool(obscured_value_re.fullmatch(value))
+        return value == self.obscure_placeholder
 
     def write(self, records, value):
         if self._is_obscured_value(value):
@@ -38,8 +28,6 @@ class Obscure(odoo_fields.Text):
 
     def convert_to_export(self, value, record):
         return self._obscure_value(value) or ""
-
-    _description_obscure = property(lambda self: self.obscure)
 
 
 odoo_fields.Obscure = Obscure

@@ -32,9 +32,10 @@ export class BackupsTab extends Component {
 
             this.state.downloading = true;
             try {
-                const result = await rpc("/agent/backup/token", {
+                const result = await rpc("/agent/ws/token", {
                     agent_id: agentId,
-                    filename,
+                    purpose: "backup",
+                    params: {filename},
                 });
 
                 if (result.error) {

@@ -8,6 +8,7 @@ ACTIONS = [
     ("download_dump", "Download Dump"),
     ("stream_logs", "Stream Logs"),
 ]
+ACTION_KEYS = {a[0] for a in ACTIONS}
 
 
 class AgentService:
@@ -16,7 +17,7 @@ class AgentService:
         self.agent = agent
 
     def queue_action(self, action, parameters=None):
-        if action not in [a[0] for a in ACTIONS]:
+        if action not in ACTION_KEYS:
             raise ValueError(f"Invalid action: {action}")
 
         return self.agent.env["deploy.event"].create(
@@ -47,9 +48,3 @@ class AgentService:
 
     def update_module(self, branch, module_name):
         return self.queue_action("update_module", {"branch": branch, "module_name": module_name})
-
-    def download_dump(self, is_production):
-        return self.queue_action("download_dump", {"is_production": is_production})
-
-    def stream_logs(self, branch):
-        return self.queue_action("stream_logs", {"branch": branch})
