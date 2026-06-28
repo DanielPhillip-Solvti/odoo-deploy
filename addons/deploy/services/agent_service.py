@@ -5,6 +5,7 @@ ACTIONS = [
     ("restore_backup", "Restore Backup"),
     ("reset_branch", "Reset Branch"),
     ("update_module", "Update Module"),
+    ("install_module", "Install Module"),
     ("download_dump", "Download Dump"),
     ("stream_logs", "Stream Logs"),
 ]
@@ -28,8 +29,13 @@ class AgentService:
             }
         )
 
-    def deploy(self, branch, is_production):
-        return self.queue_action("deploy", {"branch": branch, "is_production": is_production})
+    def deploy(self, branch, is_production, addons_repository=None, odoo_version=None):
+        params = {"branch": branch, "is_production": is_production}
+        if addons_repository:
+            params["addons_repository"] = addons_repository
+        if odoo_version:
+            params["odoo_version"] = odoo_version
+        return self.queue_action("deploy", params)
 
     def undeploy(self, branch):
         return self.queue_action("undeploy", {"branch": branch})
@@ -48,3 +54,6 @@ class AgentService:
 
     def update_module(self, branch, module_name):
         return self.queue_action("update_module", {"branch": branch, "module_name": module_name})
+
+    def install_module(self, branch, module_name):
+        return self.queue_action("install_module", {"branch": branch, "module_name": module_name})

@@ -123,7 +123,18 @@ class Agent(models.Model):
 
     def deploy_branch(self, branch, is_production=False):
         self.ensure_one()
-        event = AgentService(self).deploy(branch, is_production)
+        payload = self._parse_heartbeat()
+        odoo_version = None
+        if payload:
+            pb = payload.get("production_branch") or {}
+            staging = payload.get("staging_branches") or []
+            odoo_version = pb.get("odoo_version") or (staging[0].get("odoo_version") if staging else None)
+        event = AgentService(self).deploy(
+            branch,
+            is_production,
+            addons_repository=self.repository_url,
+            odoo_version=odoo_version,
+        )
         return {"event_id": event.id}
 
     def undeploy_branch(self, branch):
@@ -257,10 +268,19 @@ class Agent(models.Model):
         return AgentService(self).restore_backup(branch)
 
     def reset_branch(self, branch):
-        return AgentService(self).reset_branch(branch)
+        self.ensure_one()
+        event = AgentService(self).reset_branch(branch)
+        return {"event_id": event.id}
 
     def update_module(self, branch, module_name):
-        return AgentService(self).update_module(branch, module_name)
+        self.ensure_one()
+        event = AgentService(self).update_module(branch, module_name)
+        return {"event_id": event.id}
+
+    def install_module(self, branch, module_name):
+        self.ensure_one()
+        event = AgentService(self).install_module(branch, module_name)
+        return {"event_id": event.id}
 
     # buttons
     def backup_no_dump(self):

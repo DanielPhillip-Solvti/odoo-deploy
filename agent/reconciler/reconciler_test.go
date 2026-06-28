@@ -108,7 +108,7 @@ func TestScanBackups(t *testing.T) {
 		}
 	}
 
-	backups := scanBackups(tmpDir)
+	backups := ScanBackups(tmpDir)
 	if len(backups) != 3 {
 		t.Fatalf("expected 3 backup files, got %d: %v", len(backups), backups)
 	}
@@ -127,7 +127,7 @@ func TestScanBackups(t *testing.T) {
 
 func TestScanBackupsNoDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-	backups := scanBackups(tmpDir)
+	backups := ScanBackups(tmpDir)
 	if backups == nil {
 		t.Fatal("expected non-nil slice, got nil")
 	}

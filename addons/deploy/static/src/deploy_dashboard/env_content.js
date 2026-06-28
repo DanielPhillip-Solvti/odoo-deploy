@@ -20,6 +20,9 @@ export class EnvContent extends Component {
         heartbeat: {type: Object, optional: true},
         onSelectTab: {type: Function},
         onUndeployBranch: {type: Function},
+        onResetBranch: {type: Function},
+        onUpdateModule: {type: Function},
+        onInstallModule: {type: Function},
     };
 
     setup() {
@@ -29,6 +32,29 @@ export class EnvContent extends Component {
             const branch = env.repository_branch;
             if (!window.confirm(`Are you sure you want to undeploy the branch "${branch}"? This action cannot be undone.`)) return;
             this.props.onUndeployBranch(branch);
+        };
+        this.resetBranch = () => {
+            const env = this.props.env;
+            if (!env) return;
+            const branch = env.repository_branch;
+            if (!window.confirm(`Are you sure you want to reset "${branch}" to origin? All local changes will be lost.`)) return;
+            this.props.onResetBranch(branch);
+        };
+        this.updateModule = () => {
+            const env = this.props.env;
+            if (!env) return;
+            const branch = env.repository_branch;
+            const modules = window.prompt(`Enter module name(s) to update on "${branch}" (comma-separated):`);
+            if (!modules) return;
+            this.props.onUpdateModule(branch, modules);
+        };
+        this.installModule = () => {
+            const env = this.props.env;
+            if (!env) return;
+            const branch = env.repository_branch;
+            const modules = window.prompt(`Enter module name(s) to install on "${branch}" (comma-separated):`);
+            if (!modules) return;
+            this.props.onInstallModule(branch, modules);
         };
     }
 }

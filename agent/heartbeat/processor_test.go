@@ -56,11 +56,13 @@ func TestProcessorDeploySendsHeartbeatWithNewEnv(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go Processor(ctx, s, mockOdoo.URL, "test-key", eventCh)
+	go Processor(ctx, s, mockOdoo.URL, "test-key", "/tmp", eventCh)
 
 	params, _ := json.Marshal(map[string]any{
-		"branch":        "feature-x",
-		"is_production": true,
+		"branch":             "feature-x",
+		"is_production":      true,
+		"addons_repository":  "https://github.com/example/repo",
+		"odoo_version":       "19.0",
 	})
 	eventCh <- Event{
 		ID:         99,
@@ -122,11 +124,13 @@ func TestProcessorDeployStaging(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go Processor(ctx, s, mockOdoo.URL, "test-key", eventCh)
+	go Processor(ctx, s, mockOdoo.URL, "test-key", "/tmp", eventCh)
 
 	params, _ := json.Marshal(map[string]any{
-		"branch":        "feature-y",
-		"is_production": false,
+		"branch":             "feature-y",
+		"is_production":      false,
+		"addons_repository":  "https://github.com/example/repo",
+		"odoo_version":       "19.0",
 	})
 	eventCh <- Event{
 		ID:         100,
@@ -190,7 +194,7 @@ func TestProcessorUndeployRemovesBranch(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go Processor(ctx, s, mockOdoo.URL, "test-key", eventCh)
+	go Processor(ctx, s, mockOdoo.URL, "test-key", "/tmp", eventCh)
 
 	params, _ := json.Marshal(map[string]any{"branch": "feature-z"})
 	eventCh <- Event{
@@ -246,12 +250,13 @@ func TestProcessorDeployWithOdooVersion(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go Processor(ctx, s, mockOdoo.URL, "test-key", eventCh)
+	go Processor(ctx, s, mockOdoo.URL, "test-key", "/tmp", eventCh)
 
 	params, _ := json.Marshal(map[string]any{
-		"branch":        "versioned",
-		"is_production": false,
-		"odoo_version":  "18.0",
+		"branch":             "versioned",
+		"is_production":      false,
+		"addons_repository":  "https://github.com/example/repo",
+		"odoo_version":       "18.0",
 	})
 	eventCh <- Event{
 		ID:         102,

@@ -45,6 +45,9 @@
                         heartbeat="state.heartbeat || undefined"
                         onSelectTab="(tab) => selectTab(tab)"
                         onUndeployBranch="(branch) => undeployBranch(branch)"
+                        onResetBranch="(branch) => resetBranch(branch)"
+                        onUpdateModule="(branch, modules) => updateModule(branch, modules)"
+                        onInstallModule="(branch, modules) => installModule(branch, modules)"
                     />
                 </div>
             </t>

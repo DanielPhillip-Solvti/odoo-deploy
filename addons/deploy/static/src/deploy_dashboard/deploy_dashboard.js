@@ -136,6 +136,49 @@ export class DeployDashboard extends Component {
                 this.notification.add(msg, {type: "danger"});
             }
         };
+        this.resetBranch = async (branch) => {
+            const agentId = this.state.agent?.id;
+            if (!agentId) return;
+            if (!window.confirm(`Are you sure you want to reset "${branch}" to origin?`)) return;
+            try {
+                const result = await this.orm.call("deploy.agent", "reset_branch", [agentId, branch]);
+                if (result?.event_id) {
+                    this._pendingEvents[result.event_id] = {branch, action: "reset_branch"};
+                    this.notification.add(`Reset of ${branch} started.`, {type: "info"});
+                }
+            } catch (e) {
+                const msg = e?.data?.message || e?.message || `Failed to reset ${branch}`;
+                this.notification.add(msg, {type: "danger"});
+            }
+        };
+        this.updateModule = async (branch, modules) => {
+            const agentId = this.state.agent?.id;
+            if (!agentId) return;
+            try {
+                const result = await this.orm.call("deploy.agent", "update_module", [agentId, branch, modules]);
+                if (result?.event_id) {
+                    this._pendingEvents[result.event_id] = {branch, action: "update_module"};
+                    this.notification.add(`Update of modules on ${branch} started.`, {type: "info"});
+                }
+            } catch (e) {
+                const msg = e?.data?.message || e?.message || `Failed to update modules on ${branch}`;
+                this.notification.add(msg, {type: "danger"});
+            }
+        };
+        this.installModule = async (branch, modules) => {
+            const agentId = this.state.agent?.id;
+            if (!agentId) return;
+            try {
+                const result = await this.orm.call("deploy.agent", "install_module", [agentId, branch, modules]);
+                if (result?.event_id) {
+                    this._pendingEvents[result.event_id] = {branch, action: "install_module"};
+                    this.notification.add(`Install of modules on ${branch} started.`, {type: "info"});
+                }
+            } catch (e) {
+                const msg = e?.data?.message || e?.message || `Failed to install modules on ${branch}`;
+                this.notification.add(msg, {type: "danger"});
+            }
+        };
 
         onWillStart(() => this._init());
         onWillDestroy(() => this._cleanup());
@@ -220,6 +263,25 @@ export class DeployDashboard extends Component {
         if (!pending) return;
         delete this._pendingEvents[payload.event_id];
         const branch = payload.branch || pending.branch;
+
+        if (pending.action === "reset_branch" || pending.action === "update_module" || pending.action === "install_module") {
+            const label = {reset_branch: "reset", update_module: "updated", install_module: "installed"};
+            const title = {reset_branch: "Reset", update_module: "Update", install_module: "Install"};
+            const past = label[pending.action] || pending.action;
+            const cap = title[pending.action] || pending.action;
+            if (payload.status === "success") {
+                this.notification.add(`Branch ${branch} ${past} successfully.`, {
+                    title: `${cap} Complete`,
+                    type: "success",
+                });
+            } else {
+                this.notification.add(payload.message || `${pending.action} of ${branch} failed.`, {
+                    title: `${cap} Failed`,
+                    type: "danger",
+                });
+            }
+            return;
+        }
 
         if (pending.action === "undeploy") {
             this._pendingUndeploys.delete(branch);

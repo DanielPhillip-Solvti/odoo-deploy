@@ -61,7 +61,31 @@
                         <t t-esc="tab.label" />
                     </a>
                 </li>
-                <li t-if="props.env" class="nav-item ms-auto">
+                <li t-if="props.env" class="nav-item ms-auto d-flex gap-1">
+                    <button
+                        class="nav-link btn btn-sm d-flex align-items-center shadow-none border-0 rounded-0 text-warning"
+                        t-on-click="resetBranch"
+                        title="Reset this branch to origin"
+                    >
+                        <i class="fa fa-refresh me-1" />
+                        <span class="d-none d-md-inline">Reset</span>
+                    </button>
+                    <button
+                        class="nav-link btn btn-sm d-flex align-items-center shadow-none border-0 rounded-0 text-success"
+                        t-on-click="installModule"
+                        title="Install module(s)"
+                    >
+                        <i class="fa fa-plus me-1" />
+                        <span class="d-none d-md-inline">Install</span>
+                    </button>
+                    <button
+                        class="nav-link btn btn-sm d-flex align-items-center shadow-none border-0 rounded-0 text-info"
+                        t-on-click="updateModule"
+                        title="Update installed modules"
+                    >
+                        <i class="fa fa-upload me-1" />
+                        <span class="d-none d-md-inline">Update</span>
+                    </button>
                     <button
                         class="nav-link btn btn-sm d-flex align-items-center shadow-none border-0 rounded-0 text-danger"
                         t-on-click="undeploy"

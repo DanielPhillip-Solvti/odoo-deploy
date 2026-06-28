@@ -17,14 +17,13 @@ type ActionDef struct {
 }
 
 var actionMap = map[string]ActionDef{
-	"deploy":         {ScriptName: "deploy.sh", RequiredParams: []string{"branch", "is_production"}},
+	"deploy":         {ScriptName: "deploy.sh", RequiredParams: []string{"branch", "is_production", "addons_repository"}},
 	"undeploy":       {ScriptName: "undeploy.sh", RequiredParams: []string{"branch"}},
-	"backup":         {ScriptName: "backup.sh", RequiredParams: []string{}},
+	"backup":         {ScriptName: "backup.sh", RequiredParams: []string{"branch"}},
 	"restore_backup": {ScriptName: "restore_backup.sh", RequiredParams: []string{"branch"}},
 	"reset_branch":   {ScriptName: "reset_branch.sh", RequiredParams: []string{"branch"}},
 	"update_module":  {ScriptName: "update_module.sh", RequiredParams: []string{"branch", "module_name"}},
-	"download_dump":  {ScriptName: "download_dump.sh", RequiredParams: []string{"is_production"}},
-	"stream_logs":    {ScriptName: "stream_logs.sh", RequiredParams: []string{"branch"}},
+	"install_module": {ScriptName: "install_module.sh", RequiredParams: []string{"branch", "module_name"}},
 }
 
 type Event struct {
@@ -63,6 +62,9 @@ func handleEvent(event Event) (string, error) {
 
 	env := os.Environ()
 	for k, v := range params {
+		if v == nil {
+			continue
+		}
 		envKey := strings.ToUpper(k)
 		envVal := fmt.Sprintf("%v", v)
 		env = append(env, envKey+"="+envVal)
