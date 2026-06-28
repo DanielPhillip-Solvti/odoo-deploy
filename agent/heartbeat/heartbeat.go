@@ -29,6 +29,7 @@ type Heartbeat struct {
 	ProductionBranch EnvironmentState   `json:"production_branch"`
 	StagingBranches  []EnvironmentState `json:"staging_branches"`
 	Backups          []string           `json:"backups"`
+	WSUrl            string             `json:"ws_url"`
 }
 
 func scanBackups(binaryDir string) []string {
@@ -47,6 +48,21 @@ func scanBackups(binaryDir string) []string {
 	return backups
 }
 
+func buildWSUrl() string {
+	publicURL := os.Getenv("PUBLIC_URL")
+	if publicURL == "" {
+		return ""
+	}
+	scheme := "ws://"
+	if strings.HasPrefix(publicURL, "https://") {
+		scheme = "wss://"
+		publicURL = strings.TrimPrefix(publicURL, "https://")
+	}
+	publicURL = strings.TrimPrefix(publicURL, "http://")
+	publicURL = strings.TrimRight(publicURL, "/")
+	return scheme + publicURL + "/backup-ws"
+}
+
 func BuildHeartbeat() Heartbeat {
 	heartbeatFile := os.Getenv("HEARTBEAT_FILE")
 	if heartbeatFile == "" {
@@ -62,6 +78,7 @@ func BuildHeartbeat() Heartbeat {
 			ProductionBranch: EnvironmentState{},
 			StagingBranches:  []EnvironmentState{},
 			Backups:          []string{},
+			WSUrl:            buildWSUrl(),
 		}
 	}
 
@@ -80,6 +97,7 @@ func BuildHeartbeat() Heartbeat {
 
 	binaryDir := filepath.Dir(os.Args[0])
 	hb.Backups = scanBackups(binaryDir)
+	hb.WSUrl = buildWSUrl()
 
 	return hb
 }

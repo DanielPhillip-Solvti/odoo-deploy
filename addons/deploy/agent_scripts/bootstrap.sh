@@ -112,6 +112,11 @@ echo "📂 Extracting runtime assets (scripts, Caddyfile, docker-compose.yml)...
 # -----------------------------
 # ENV CONFIG
 # -----------------------------
+# -----------------------------
+# DETECT HOST IP
+# -----------------------------
+HOST_IP=$(ip -4 route get 1 | grep -oP 'src \K\S+' 2>/dev/null || hostname -I | awk '{print $1}' 2>/dev/null || echo "")
+
 echo "📝 Writing environment configuration..."
 
 cat > .env <<EOF
@@ -119,6 +124,10 @@ cat > .env <<EOF
 ODOO_URL=$ODOO_URL
 API_KEY=$API_KEY
 REPO_URL=$REPO_URL
+
+# WebSocket
+PUBLIC_URL=${HOST_IP}
+AGENT_WS_ADDR=${HOST_IP}
 
 # Database Config
 POSTGRES_USER=$POSTGRES_USER

@@ -20,6 +20,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - PUBLIC_URL=${PUBLIC_URL}
+      - AGENT_WS_ADDR=${AGENT_WS_ADDR}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data

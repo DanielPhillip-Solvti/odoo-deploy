@@ -13,6 +13,7 @@ class HeartbeatPayload(BaseModel):
     production_branch: EnvironmentPayload
     staging_branches: list[EnvironmentPayload]
     backups: list[str] = []
+    ws_url: str = ""
 
 
 class EventCallbackPayload(BaseModel):

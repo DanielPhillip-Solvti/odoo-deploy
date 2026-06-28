@@ -146,5 +146,7 @@ class AgentController(http.Controller):
         }
         if heartbeat_payload.repo_url:
             vals["repository_url"] = heartbeat_payload.repo_url
+        if heartbeat_payload.ws_url:
+            vals["ws_url"] = heartbeat_payload.ws_url
         agent.sudo().write(vals)
         agent.sudo()._broadcast_heartbeat_via_bus()

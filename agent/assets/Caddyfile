@@ -3,23 +3,24 @@
     email admin@example.com
 }
 
-# Basic placeholder catch-all route over HTTP
+# Backup WebSocket - path-based route works with any hostname
 :80 {
-    respond "Infrastructure initialized. Deploy environments via Odoo to map domains." 200
-}
-
-# Backup WebSocket - tightly locked route
-http://*.localhost/backup-ws/* {
-    @missing_token {
-        not query token=*
-    }
-    respond @missing_token "Missing token" 401
-
-    reverse_proxy 127.0.0.1:9876 {
-        header_up X-Backup-Token {query.token}
-        transport http {
-            read_timeout 5m
-            write_timeout 5m
+    @backup_ws path /backup-ws*
+    handle @backup_ws {
+        @missing_token {
+            not query token=*
         }
+        respond @missing_token "Missing token" 401
+
+        reverse_proxy {env.AGENT_WS_ADDR}:9876 {
+            header_up X-Backup-Token {query.token}
+            transport http {
+                read_timeout 5m
+                write_timeout 5m
+            }
+        }
+    }
+    handle {
+        respond "Infrastructure initialized. Deploy environments via Odoo to map domains." 200
     }
 }
