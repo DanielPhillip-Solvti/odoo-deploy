@@ -1,14 +1,51 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <templates xml:space="preserve">
     <t t-name="deploy.LogsTab">
-        <div class="o_deploy_logs_tab">
-            <div class="card shadow-sm">
-                <div class="card-body text-center py-5">
-                    <i class="fa fa-file-text-o fa-4x text-muted mb-3" />
-                    <h5 class="text-muted">Live Log Streaming</h5>
-                    <p class="text-muted mb-3">Real-time deployment and application logs will appear here.</p>
-                    <span class="badge bg-secondary">Coming Soon</span>
+        <div class="o_deploy_logs_tab d-flex flex-column h-100">
+            <div class="d-flex align-items-center gap-2 mb-2 flex-shrink-0">
+                <button
+                    class="btn btn-sm"
+                    t-att-class="state.streaming ? 'btn-outline-danger' : 'btn-outline-primary'"
+                    t-on-click="toggleStream"
+                >
+                    <i t-attf-class="fa {{ state.streaming ? 'fa-stop' : 'fa-play' }} me-1" />
+                    <t t-esc="state.streaming ? 'Stop' : 'Stream Logs'" />
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" t-on-click="clearLogs" t-att-disabled="state.lines.length === 0">
+                    <i class="fa fa-eraser me-1" />
+                    Clear
+                </button>
+                <div class="form-check form-check-inline mb-0 ms-2">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="autoScroll"
+                        t-att-checked="state.autoScroll"
+                        t-on-click="toggleAutoScroll"
+                    />
+                    <label class="form-check-label" for="autoScroll">Auto-scroll</label>
                 </div>
+                <span t-if="state.connected" class="badge bg-success ms-auto">Connected</span>
+                <span t-else="" class="badge bg-secondary ms-auto">Disconnected</span>
+            </div>
+
+            <div
+                t-ref="logContainer"
+                class="o_deploy_logs_viewer bg-dark text-light p-2 rounded flex-grow-1 overflow-auto font-monospace"
+                style="font-size: 0.8rem; line-height: 1.4; min-height: 200px; white-space: pre-wrap; word-break: break-all;"
+            >
+                <t t-if="state.lines.length === 0 &amp;&amp; !state.streaming">
+                    <div class="text-muted text-center py-5">
+                        <i class="fa fa-file-text-o fa-2x mb-2 d-block" />
+                        Press "Stream Logs" to connect.
+                    </div>
+                </t>
+                <t t-else="">
+                    <div t-foreach="state.lines" t-as="line" t-key="line_index" class="o_deploy_log_line">
+                        <t t-esc="line" />
+                    </div>
+                    <div t-if="state.connected" id="o_deploy_log_bottom" />
+                </t>
             </div>
         </div>
     </t>

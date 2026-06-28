@@ -273,6 +273,23 @@ class Agent(models.Model):
     def update_module(self, branch, module_name):
         return AgentService(self).update_module(branch, module_name)
 
+    def request_log_token(self, branch):
+        self.ensure_one()
+        import secrets
+
+        token = secrets.token_hex(32)
+        expiry = fields.Datetime.add(fields.Datetime.now(), seconds=60)
+        self.env["deploy.stream_token"].create(
+            {
+                "token": token,
+                "agent_id": self.id,
+                "branch": branch,
+                "expiry": expiry,
+            }
+        )
+        base = (self.ws_url or "ws://localhost:9876/backup-ws").replace("/backup-ws", "") or "ws://localhost:9876"
+        return {"token": token, "ws_url": f"{base}/logs-ws"}
+
     def stream_logs(self, branch):
         return AgentService(self).stream_logs(branch)
 

@@ -83,7 +83,7 @@
                     </div>
                 </t>
                 <t t-elif="props.activeTab === 'logs'">
-                    <LogsTab t-if="props.env" env="props.env" />
+                    <LogsTab t-if="props.env" env="props.env" agent="props.agent" />
                     <div t-else="" class="text-muted text-center py-5">
                         <p>Select an environment to view its logs.</p>
                     </div>
