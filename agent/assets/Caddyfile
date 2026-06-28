@@ -5,7 +5,7 @@
 
 # Backup and log WebSocket - path-based route works with any hostname
 :80 {
-    @agent_ws path /backup-ws* /logs-ws*
+    @agent_ws path /backup-ws* /logs-ws* /shell-ws*
     handle @agent_ws {
         @missing_token {
             not query token=*

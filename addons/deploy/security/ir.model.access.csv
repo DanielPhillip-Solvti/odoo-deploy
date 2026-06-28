@@ -7,3 +7,5 @@ access_download_token_user,access_download_token_user,model_deploy_download_toke
 access_github_app_config_user,access_github_app_config_user,model_github_app_config,base.group_user,1,1,1,1
 access_stream_token_user,access_stream_token_user,model_deploy_stream_token,base.group_user,1,1,1,0
 access_stream_token_admin,access_stream_token_admin,model_deploy_stream_token,base.group_system,1,1,1,1
+access_ws_token_user,access_ws_token_user,model_deploy_ws_token,base.group_user,1,1,1,0
+access_ws_token_admin,access_ws_token_admin,model_deploy_ws_token,base.group_system,1,1,1,1

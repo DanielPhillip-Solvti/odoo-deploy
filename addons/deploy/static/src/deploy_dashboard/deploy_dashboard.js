@@ -85,7 +85,7 @@ export class DeployDashboard extends Component {
                 this.state.undeployedBranches = [...this.state.undeployedBranches, branch];
             }
             if (this.state.selectedEnv?.repository_branch === branch) {
-                this.state.selectedEnv = this.state.environments[0] || null;
+                this.state.selectedEnv = this.state.environments[0] || undefined;
             }
             try {
                 const result = await this.orm.call("deploy.agent", "undeploy_branch", [agentId, branch]);

@@ -241,21 +241,32 @@ class Agent(models.Model):
     def download_dump(self, production):
         return AgentService(self).download_dump(production)
 
-    def request_download_token(self, filename):
+    def request_ws_token(self, purpose, params=None):
         self.ensure_one()
         import secrets
 
         token = secrets.token_hex(32)
         expiry = fields.Datetime.add(fields.Datetime.now(), seconds=60)
-        self.env["deploy.download_token"].create(
+        path_map = {"backup": "/backup-ws", "logs": "/logs-ws", "shell": "/shell-ws"}
+        base = (self.ws_url or "ws://localhost:9876/backup-ws").replace("/backup-ws", "") or "ws://localhost:9876"
+        ws_url = f"{base}{path_map.get(purpose, '/ws')}"
+
+        self.env["deploy.ws_token"].create(
             {
                 "token": token,
                 "agent_id": self.id,
-                "filename": filename,
+                "purpose": purpose,
+                "params": params or {},
                 "expiry": expiry,
             }
         )
-        return {"token": token, "ws_url": self.ws_url or ""}
+        return {"token": token, "ws_url": ws_url}
+
+    def request_download_token(self, filename):
+        return self.request_ws_token("backup", {"filename": filename})
+
+    def request_log_token(self, branch):
+        return self.request_ws_token("logs", {"branch": branch})
 
     # Branch Actions ----------------------------------
     def deploy(self, branch, is_production=False):
@@ -272,23 +283,6 @@ class Agent(models.Model):
 
     def update_module(self, branch, module_name):
         return AgentService(self).update_module(branch, module_name)
-
-    def request_log_token(self, branch):
-        self.ensure_one()
-        import secrets
-
-        token = secrets.token_hex(32)
-        expiry = fields.Datetime.add(fields.Datetime.now(), seconds=60)
-        self.env["deploy.stream_token"].create(
-            {
-                "token": token,
-                "agent_id": self.id,
-                "branch": branch,
-                "expiry": expiry,
-            }
-        )
-        base = (self.ws_url or "ws://localhost:9876/backup-ws").replace("/backup-ws", "") or "ws://localhost:9876"
-        return {"token": token, "ws_url": f"{base}/logs-ws"}
 
     def stream_logs(self, branch):
         return AgentService(self).stream_logs(branch)

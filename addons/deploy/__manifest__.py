@@ -7,14 +7,16 @@
     "category": "Tools",
     "data": [
         "security/ir.model.access.csv",
+        "data/github_app_config.xml",
         "views/deploy_menu_items.xml",
         "views/deploy_agent_views.xml",
         "views/deploy_event_views.xml",
         "views/github_app_config_views.xml",
-        "data/github_app_config.xml",
     ],
     "assets": {
         "web.assets_backend": [
+            "deploy/static/lib/xterm/xterm.css",
+            "deploy/static/lib/xterm/xterm.js",
             "deploy/static/src/scss/deploy_style.scss",
             "deploy/static/src/deploy_dashboard/deploy_dashboard.js",
             "deploy/static/src/deploy_dashboard/deploy_dashboard.xml",

@@ -105,17 +105,49 @@ class AgentController(http.Controller):
             headers=[("Content-Disposition", f'attachment; filename="{filename}"')],
         )
 
+    @http.route("/agent/ws/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
+    def request_ws_token(self, **kwargs):
+        agent_id = kwargs.get("agent_id")
+        purpose = kwargs.get("purpose")
+        params = kwargs.get("params", {})
+        if not agent_id or not purpose:
+            return {"error": "Missing agent_id or purpose"}
+
+        agent = request.env["deploy.agent"].browse(agent_id)
+        if not agent.exists():
+            return {"error": "Agent not found"}
+
+        return agent.request_ws_token(purpose, params)
+
+    @http.route("/agent/validate_ws_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
+    def validate_ws_token(self, **kwargs):
+        api_key = self._extract_api_key()
+        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
+        if not agent:
+            return {"valid": False, "purpose": "", "params": {}}
+
+        token_value = kwargs.get("token")
+        if not token_value:
+            return {"valid": False, "purpose": "", "params": {}}
+
+        ws_token = request.env["deploy.ws_token"].sudo().search([("token", "=", token_value)], limit=1)
+        if not ws_token or not ws_token.is_valid():
+            return {"valid": False, "purpose": "", "params": {}}
+
+        ws_token.mark_used()
+        return {"valid": True, "purpose": ws_token.purpose, "params": ws_token.params}
+
+    # Backward-compat wrappers -------------------------------------------------
+
     @http.route("/agent/backup/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
     def request_backup_token(self, **kwargs):
         agent_id = kwargs.get("agent_id")
         filename = kwargs.get("filename")
         if not agent_id or not filename:
             return {"error": "Missing agent_id or filename"}
-
         agent = request.env["deploy.agent"].browse(agent_id)
         if not agent.exists():
             return {"error": "Agent not found"}
-
         return agent.request_download_token(filename)
 
     @http.route("/agent/logs/token", type="jsonrpc", auth="user", methods=["POST"], csrf=False)
@@ -124,31 +156,10 @@ class AgentController(http.Controller):
         branch = kwargs.get("branch")
         if not agent_id or not branch:
             return {"error": "Missing agent_id or branch"}
-
         agent = request.env["deploy.agent"].browse(agent_id)
         if not agent.exists():
             return {"error": "Agent not found"}
-
         return agent.request_log_token(branch)
-
-    @http.route("/agent/validate_log_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
-    def validate_log_token(self, **kwargs):
-        api_key = self._extract_api_key()
-        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
-        if not agent:
-            return {"valid": False, "branch": ""}
-
-        token_value = kwargs.get("token")
-        if not token_value:
-            return {"valid": False, "branch": ""}
-
-        stream_token = request.env["deploy.stream_token"].sudo().search([("token", "=", token_value)], limit=1)
-
-        if not stream_token or not stream_token.is_valid():
-            return {"valid": False, "branch": ""}
-
-        stream_token.mark_used()
-        return {"valid": True, "branch": stream_token.branch}
 
     @http.route("/agent/validate_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def validate_download_token(self, **kwargs):
@@ -156,20 +167,31 @@ class AgentController(http.Controller):
         agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
         if not agent:
             return {"valid": False, "filename": ""}
-
         download_token_value = kwargs.get("token")
         if not download_token_value:
             return {"valid": False, "filename": ""}
-
         download_token = (
             request.env["deploy.download_token"].sudo().search([("token", "=", download_token_value)], limit=1)
         )
-
         if not download_token or not download_token.is_valid():
             return {"valid": False, "filename": ""}
-
         download_token.mark_used()
         return {"valid": True, "filename": download_token.filename}
+
+    @http.route("/agent/validate_log_token", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
+    def validate_log_token(self, **kwargs):
+        api_key = self._extract_api_key()
+        agent = request.env["deploy.agent"].sudo().search([("api_key", "=", api_key)], limit=1)
+        if not agent:
+            return {"valid": False, "branch": ""}
+        token_value = kwargs.get("token")
+        if not token_value:
+            return {"valid": False, "branch": ""}
+        stream_token = request.env["deploy.stream_token"].sudo().search([("token", "=", token_value)], limit=1)
+        if not stream_token or not stream_token.is_valid():
+            return {"valid": False, "branch": ""}
+        stream_token.mark_used()
+        return {"valid": True, "branch": stream_token.branch}
 
     def _apply_heartbeat(self, agent, heartbeat_payload: HeartbeatPayload):
         vals = {

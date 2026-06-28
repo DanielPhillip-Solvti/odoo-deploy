@@ -4,6 +4,7 @@ import (
 	"agent/backup"
 	"agent/heartbeat"
 	"agent/logs"
+	"agent/shell"
 	"embed"
 	"flag"
 	"io/fs"
@@ -100,10 +101,16 @@ func main() {
 		APIKey:  apiKey,
 	}
 
+	shellHandler := &shell.Handler{
+		OdooURL: odooURL,
+		APIKey:  apiKey,
+	}
+
 	go func() {
 		mux := http.NewServeMux()
 		mux.Handle("/backup-ws", backupHandler)
 		mux.Handle("/logs-ws", logsHandler)
+		mux.Handle("/shell-ws", shellHandler)
 		log.Printf("WebSocket server listening on :%s", wsPort)
 		if err := http.ListenAndServe("0.0.0.0:"+wsPort, mux); err != nil {
 			log.Fatalf("WS server error: %v", err)

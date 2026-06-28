@@ -2,15 +2,14 @@ package logs
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os/exec"
 	"strings"
-	"time"
+
+	"agent/token"
 
 	"github.com/gorilla/websocket"
 )
@@ -20,30 +19,29 @@ type Handler struct {
 	APIKey  string
 }
 
-type validateResponse struct {
-	Valid  bool   `json:"valid"`
-	Branch string `json:"branch"`
-}
-
-type validateRPCResult struct {
-	Result validateResponse `json:"result"`
-}
-
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
+	tok := r.URL.Query().Get("token")
+	if tok == "" {
 		http.Error(w, "Missing token", http.StatusUnauthorized)
 		return
 	}
 
-	vr, err := h.validateToken(token)
-	if err != nil || !vr.Valid {
+	vr, err := token.ValidateToken(h.OdooURL, h.APIKey, tok)
+	if err != nil || !vr.Valid || vr.Purpose != "logs" {
 		log.Printf("Log token validation failed: %v", err)
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	branch := vr.Branch
+	var params struct {
+		Branch string `json:"branch"`
+	}
+	if err := json.Unmarshal(vr.Params, &params); err != nil || params.Branch == "" {
+		http.Error(w, "Invalid token params", http.StatusBadRequest)
+		return
+	}
+
+	branch := params.Branch
 	if branch == "" || strings.Contains(branch, "/") || strings.Contains(branch, "..") {
 		http.Error(w, "Invalid branch", http.StatusBadRequest)
 		return
@@ -106,32 +104,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	cmd.Wait()
 	conn.WriteMessage(websocket.TextMessage, []byte("DONE"))
-}
-
-func (h *Handler) validateToken(token string) (validateResponse, error) {
-	body, _ := json.Marshal(map[string]any{
-		"jsonrpc": "2.0",
-		"params":  map[string]string{"token": token},
-	})
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("POST", h.OdooURL+"/agent/validate_log_token", bytes.NewReader(body))
-	if err != nil {
-		return validateResponse{}, err
-	}
-	req.Header.Set("Authorization", "Bearer "+h.APIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return validateResponse{}, fmt.Errorf("validation request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	var rpcResp validateRPCResult
-	if err := json.Unmarshal(respBody, &rpcResp); err != nil {
-		return validateResponse{}, fmt.Errorf("failed to decode validation response: %w", err)
-	}
-	return rpcResp.Result, nil
 }

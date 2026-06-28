@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <templates xml:space="preserve">
     <t t-name="deploy.ShellTab">
-        <div class="o_deploy_shell_tab">
-            <div class="card shadow-sm">
-                <div class="card-body text-center py-5">
-                    <i class="fa fa-terminal fa-4x text-muted mb-3" />
-                    <h5 class="text-muted">Remote Shell Access</h5>
-                    <p class="text-muted mb-3">Securely connect to this environment's container via SSH or web terminal.</p>
-                    <span class="badge bg-secondary">Coming Soon</span>
-                </div>
+        <div class="o_deploy_shell_tab d-flex flex-column h-100">
+            <div class="d-flex align-items-center gap-2 mb-2 flex-shrink-0">
+                <button class="btn btn-sm" t-att-class="_ws ? 'btn-outline-danger' : 'btn-outline-primary'" t-on-click="toggleConnection">
+                    <i t-attf-class="fa {{ _ws ? 'fa-plug' : 'fa-power-off' }} me-1" />
+                    <t t-esc="_ws ? 'Disconnect' : 'Connect'" />
+                </button>
+                <span t-if="_ws" class="badge bg-success ms-auto">Connected</span>
+                <span t-else="" class="badge bg-secondary ms-auto">Disconnected</span>
             </div>
+            <div t-ref="termContainer" class="flex-grow-1 overflow-hidden rounded" style="min-height: 200px;" />
         </div>
     </t>
 </templates>
