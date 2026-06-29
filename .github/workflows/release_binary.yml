@@ -2,7 +2,7 @@ name: Release Binary
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "odoosh_ui" ]
 
 jobs:
   release:
@@ -29,6 +29,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: agent/build/agent
-          tag_name: v1.0.0
+          tag_name: v1.0.0sh
 
     

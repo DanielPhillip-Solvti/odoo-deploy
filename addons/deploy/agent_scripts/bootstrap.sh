@@ -101,9 +101,9 @@ cd "$TARGET_DIR"
 # -----------------------------
 # FETCH AGENT BINARY & EXTRACT ASSETS
 # -----------------------------
-# fetch release https://github.com/DanielPhillip-Solvti/odoo-deploy-agent/releases/tag/v1.0.0
+# fetch release https://github.com/DanielPhillip-Solvti/odoo-deploy-agent/releases/tag/v1.0.0sh
 echo "⬇️ Downloading agent binary..."
-curl -L https://github.com/DanielPhillip-Solvti/odoo-deploy/releases/download/v1.0.0/agent -o "$TARGET_DIR/agent"
+curl -L https://github.com/DanielPhillip-Solvti/odoo-deploy/releases/download/v1.0.0sh/agent -o "$TARGET_DIR/agent"
 chmod +x "$TARGET_DIR/agent"
 
 echo "📂 Extracting runtime assets (scripts, Caddyfile, docker-compose.yml)..."
