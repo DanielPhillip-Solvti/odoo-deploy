@@ -58,7 +58,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	containerName := "deploy-" + branch
+	containerName := branch
 	cmd := exec.Command("docker", "logs", "-f", "--tail", "100", containerName)
 
 	stdout, err := cmd.StdoutPipe()

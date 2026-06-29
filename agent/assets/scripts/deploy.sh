@@ -63,14 +63,17 @@ if [ "$DB_EXISTS" = "false" ]; then
     -v "$ADDONS_DIR:/mnt/extra-addons" \
     -v "$ENV_DIR/odoo.conf:/etc/odoo/odoo.conf" \
     "odoo-${BRANCH}" \
-    odoo -c /etc/odoo/odoo.conf -i base --stop-after-init
+    odoo -c /etc/odoo/odoo.conf -d "$BRANCH" -i base --stop-after-init
 fi
 
 docker run -d --name "$CONTAINER" --network web --restart unless-stopped \
+  --label "deploy.branch=$BRANCH" \
+  --label "deploy.is_production=$IS_PRODUCTION" \
+  --label "deploy.odoo_version=$ODOO_VERSION" \
   -v "$ADDONS_DIR:/mnt/extra-addons" \
   -v "$ENV_DIR/odoo.conf:/etc/odoo/odoo.conf" \
   "odoo-${BRANCH}" \
-  odoo -c /etc/odoo/odoo.conf
+  odoo -c /etc/odoo/odoo.conf -d "$BRANCH"
 
 docker network connect deploy-db-network "$CONTAINER"
 

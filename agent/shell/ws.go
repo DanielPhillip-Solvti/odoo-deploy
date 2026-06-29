@@ -56,7 +56,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	shellCmd := params.Command
 	if shellCmd == "" {
-		shellCmd = "python3"
+		shellCmd = "odoo -c /etc/odoo/odoo.conf -d " + branch + " shell"
 	}
 
 	upgrader := websocket.Upgrader{
@@ -69,7 +69,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	cmd := exec.Command("docker", "exec", "-it", "deploy-"+branch, shellCmd)
+	cmd := exec.Command("docker", "exec", "-it", branch, "bash", "-c", shellCmd)
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {

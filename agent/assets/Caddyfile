@@ -20,6 +20,7 @@
             }
         }
     }
+    # Branch routes are inserted here by deploy scripts
     handle {
         respond "Infrastructure initialized. Deploy environments via Odoo to map domains." 200
     }
