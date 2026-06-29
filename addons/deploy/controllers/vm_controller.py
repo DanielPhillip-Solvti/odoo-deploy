@@ -170,4 +170,5 @@ class AgentController(http.Controller):
             vals["ws_url"] = heartbeat_payload.ws_url
         agent.sudo().write(vals)
         if payload_changed:
+            agent.sudo()._sync_environments(new_payload)
             agent.sudo()._broadcast_heartbeat_via_bus()

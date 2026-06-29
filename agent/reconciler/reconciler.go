@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -120,25 +119,25 @@ func splitLabelPairs(s string) []string {
 	return pairs
 }
 
-func Run(ctx context.Context, s *state.AgentState, binaryDir string) {
+func Run(ctx context.Context, s *state.AgentState, backupDir string) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
-	reconcile(s, binaryDir)
+	reconcile(s, backupDir)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			reconcile(s, binaryDir)
+			reconcile(s, backupDir)
 		}
 	}
 }
 
-func reconcile(s *state.AgentState, binaryDir string) {
+func reconcile(s *state.AgentState, backupDir string) {
 	prod, staging := scanContainers()
-	backups := ScanBackups(binaryDir)
+	backups := ScanBackups(backupDir)
 	s.Update(prod, staging, backups)
 	log.Printf("State reconciled: production=%q, staging=%d, backups=%d", prod.Branch, len(staging), len(backups))
 }
@@ -197,13 +196,12 @@ func scanContainers() (state.EnvironmentState, []state.EnvironmentState) {
 	return prod, staging
 }
 
-func ScanBackups(binaryDir string) []string {
-	backupsDir := filepath.Join(binaryDir, "backups")
+func ScanBackups(backupsDir string) []string {
 	entries, err := os.ReadDir(backupsDir)
 	if err != nil {
 		return []string{}
 	}
-	var backups []string
+	backups := []string{}
 	for _, e := range entries {
 		if !e.IsDir() && (strings.HasSuffix(e.Name(), ".dump") || strings.HasSuffix(e.Name(), "_neutralised.dump")) {
 			backups = append(backups, e.Name())

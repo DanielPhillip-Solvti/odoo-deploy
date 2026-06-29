@@ -36,6 +36,8 @@ class Agent(models.Model):
     )
 
     event_ids = fields.One2many("deploy.event", "agent_id")
+    environment_ids = fields.One2many("deploy.environment", "agent_id")
+    available_branches_json = fields.Json(compute="_compute_available_branches")
 
     def _compute_status(self):
         for record in self:
@@ -47,6 +49,13 @@ class Agent(models.Model):
                     record.status = "offline"
                 else:
                     record.status = "active"
+
+    def _compute_available_branches(self):
+        for record in self:
+            try:
+                record.available_branches_json = record.get_undeployed_branches()
+            except Exception:
+                record.available_branches_json = []
 
     def get_events(self, last_event_id=None):
         self.ensure_one()
@@ -106,9 +115,11 @@ class Agent(models.Model):
     def action_open_dashboard(self):
         self.ensure_one()
         return {
-            "type": "ir.actions.client",
-            "tag": "deploy.dashboard",
-            "params": {"agent_id": self.id},
+            "type": "ir.actions.act_window",
+            "res_model": "deploy.agent",
+            "res_id": self.id,
+            "view_mode": "form",
+            "views": [(False, "form")],
         }
 
     def get_undeployed_branches(self):
@@ -179,6 +190,64 @@ class Agent(models.Model):
             },
             {"key": "delete", "label": "Delete", "icon": "fa-trash", "command": f"odoosh deploy destroy {branch}"},
         ]
+
+    def _sync_environments(self, payload_dict):
+        self.ensure_one()
+        branches_in_heartbeat = set()
+
+        pb = payload_dict.get("production_branch") or {}
+        if pb.get("branch"):
+            branches_in_heartbeat.add(pb["branch"])
+            self._upsert_environment(
+                pb["branch"],
+                pb.get("odoo_version", ""),
+                True,
+                pb.get("status", ""),
+            )
+
+        for sb in payload_dict.get("staging_branches") or []:
+            if sb.get("branch"):
+                branches_in_heartbeat.add(sb["branch"])
+                self._upsert_environment(
+                    sb["branch"],
+                    sb.get("odoo_version", ""),
+                    False,
+                    sb.get("status", ""),
+                )
+
+        stale = self.env["deploy.environment"].search(
+            [
+                ("agent_id", "=", self.id),
+                ("repository_branch", "not in", list(branches_in_heartbeat)),
+            ]
+        )
+        stale.unlink()
+
+    def _upsert_environment(self, branch, odoo_version, is_production, state):
+        env_obj = self.env["deploy.environment"]
+        existing = env_obj.search(
+            [
+                ("agent_id", "=", self.id),
+                ("repository_branch", "=", branch),
+            ],
+            limit=1,
+        )
+        vals = {
+            "odoo_version": odoo_version,
+            "is_production": is_production,
+            "state": state,
+            "stale": False,
+        }
+        if existing:
+            existing.write(vals)
+        else:
+            vals.update(
+                {
+                    "agent_id": self.id,
+                    "repository_branch": branch,
+                }
+            )
+            env_obj.create(vals)
 
     def _broadcast_heartbeat_via_bus(self):
         self.ensure_one()

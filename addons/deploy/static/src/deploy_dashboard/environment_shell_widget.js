@@ -1,18 +1,39 @@
 /** @odoo-module **/
 
-import {Component, onMounted, onWillDestroy, useRef} from "@odoo/owl";
-import {useService} from "@web/core/utils/hooks";
+import {Component, onMounted, onWillDestroy, onWillStart, useRef, useState} from "@odoo/owl";
+import {registry} from "@web/core/registry";
 import {rpc} from "@web/core/network/rpc";
+import {standardFieldProps} from "@web/views/fields/standard_field_props";
+import {useService} from "@web/core/utils/hooks";
 
-/* global Terminal */
+/* global Terminal, Uint8Array */
 
-// Inline FitAddon — measures cell size from a canvas element in the terminal
 class FitAddon {
     activate(terminal) {
         this._terminal = terminal;
     }
     dispose() {
-        /* Required by addon interface */
+        // Noop
+    }
+    _measureCell() {
+        // Try xterm.js internal renderer dimensions first
+        const core = this._terminal._core;
+        if (core) {
+            const rs = core._renderService;
+            if (rs && rs.dimensions && rs.dimensions.actualCellWidth && rs.dimensions.actualCellHeight) {
+                return {w: rs.dimensions.actualCellWidth, h: rs.dimensions.actualCellHeight};
+            }
+        }
+        // Fallback: measure a char element in the DOM
+        const el = this._terminal.element;
+        const measure = el && el.querySelector(".xterm-char-measure-element");
+        if (measure) {
+            const rect = measure.getBoundingClientRect();
+            const text = measure.textContent || ">";
+            const cw = rect.width / Math.max(text.length, 1);
+            if (cw > 0 && rect.height > 0) return {w: cw, h: rect.height};
+        }
+        return null;
     }
     fit() {
         if (!this._terminal || !this._terminal.element) return;
@@ -21,34 +42,31 @@ class FitAddon {
         const parentW = parent.clientWidth;
         const parentH = parent.clientHeight;
         if (parentW <= 0 || parentH <= 0) return;
-
-        const canvas = this._terminal.element.querySelector("canvas");
-        if (!canvas) return;
-        const cellW = canvas.width / this._terminal.cols;
-        const cellH = canvas.height / this._terminal.rows;
-        if (!cellW || !cellH || isNaN(cellW) || isNaN(cellH)) return;
-
-        const cols = Math.max(2, Math.floor(parentW / cellW));
-        const rows = Math.max(1, Math.floor(parentH / cellH));
+        const cell = this._measureCell();
+        if (!cell) return;
+        const cols = Math.max(2, Math.floor(parentW / cell.w));
+        const rows = Math.max(1, Math.floor(parentH / cell.h));
         if (this._terminal.rows === rows && this._terminal.cols === cols) return;
         this._terminal.resize(cols, rows);
     }
 }
 
-export class ShellTab extends Component {
-    static template = "deploy.ShellTab";
-    static props = {
-        env: {type: Object},
-        agent: {type: Object, optional: true},
-    };
+export class EnvironmentShell extends Component {
+    static template = "deploy.EnvironmentShell";
+    static props = {...standardFieldProps};
 
     setup() {
         this.notification = useService("notification");
+        this.orm = useService("orm");
         this.termContainer = useRef("termContainer");
+        this.state = useState({connected: false});
         this._term = null;
         this._fit = null;
         this._ws = null;
         this._token = null;
+        this._agentId = null;
+        this._wsUrl = "ws://localhost:9876";
+        this._branchName = "";
 
         this.toggleConnection = () => {
             if (this._ws) {
@@ -57,6 +75,10 @@ export class ShellTab extends Component {
                 this._connect();
             }
         };
+
+        onWillStart(async () => {
+            await this._loadMeta();
+        });
 
         onMounted(() => {
             this._term = new Terminal({
@@ -74,28 +96,48 @@ export class ShellTab extends Component {
             this._fit = new FitAddon();
             this._term.loadAddon(this._fit);
             this._term.open(this.termContainer.el);
-            this._fit.fit();
+            requestAnimationFrame(() => this._fit.fit());
+
+            this._lastFit = 0;
+            this._resizeObserver = new ResizeObserver(() => {
+                const now = Date.now();
+                if (this._fit && now - this._lastFit > 200) {
+                    this._lastFit = now;
+                    this._fit.fit();
+                }
+            });
+            this._resizeObserver.observe(this.termContainer.el);
         });
 
-        onWillDestroy(() => this._disconnect());
+        onWillDestroy(() => {
+            this._disconnect();
+            if (this._resizeObserver) this._resizeObserver.disconnect();
+        });
     }
 
-    get branch() {
-        return this.props.env?.repository_branch;
+    get isConnected() {
+        return this.state.connected;
     }
 
-    get wsBaseUrl() {
-        const agent = this.props.agent;
-        if (agent?.ws_url) {
-            const base = agent.ws_url.replace(/\/backup-ws.*$/, "");
-            return base || "ws://localhost:9876";
+    async _loadMeta() {
+        const envId = this.props.record.resId;
+        if (!envId) return;
+        try {
+            const [env] = await this.orm.read("deploy.environment", [envId], ["agent_id", "repository_branch"]);
+            const agentId = Array.isArray(env.agent_id) ? env.agent_id[0] : env.agent_id;
+            this._branchName = env.repository_branch;
+            if (!agentId) return;
+            const [agent] = await this.orm.read("deploy.agent", [agentId], ["ws_url"]);
+            this._agentId = agentId;
+            this._wsUrl = agent.ws_url || "ws://localhost:9876";
+        } catch (e) {
+            // Silent
         }
-        return "ws://localhost:9876";
     }
 
     async _connect() {
-        const branch = this.branch;
-        const agentId = this.props.agent?.id;
+        const branch = this._branchName;
+        const agentId = this._agentId;
         if (!branch || !agentId) return;
 
         try {
@@ -115,6 +157,7 @@ export class ShellTab extends Component {
             this._ws = new WebSocket(`${wsUrl}?token=${result.token}`);
 
             this._ws.onopen = () => {
+                this.state.connected = true;
                 this._term.clear();
                 this._term.write("Connecting...\r\n");
                 if (this._fit) this._fit.fit();
@@ -140,6 +183,7 @@ export class ShellTab extends Component {
             };
 
             this._ws.onclose = () => {
+                this.state.connected = false;
                 this._term.write("\r\n\x1b[31m--- Connection closed ---\x1b[0m\r\n");
                 this._ws = null;
             };
@@ -152,13 +196,7 @@ export class ShellTab extends Component {
 
             this._term.onResize(({cols, rows}) => {
                 if (this._ws && this._ws.readyState === WebSocket.OPEN) {
-                    this._ws.send(
-                        JSON.stringify({
-                            type: "resize",
-                            cols: cols,
-                            rows: rows,
-                        })
-                    );
+                    this._ws.send(JSON.stringify({type: "resize", cols, rows}));
                 }
             });
 
@@ -175,6 +213,15 @@ export class ShellTab extends Component {
             this._ws.close();
             this._ws = null;
         }
+        this.state.connected = false;
         this._term.write("\r\n\x1b[33m--- Disconnected ---\x1b[0m\r\n");
     }
 }
+
+export const environmentShell = {
+    component: EnvironmentShell,
+    displayName: "Environment Shell",
+    supportedTypes: ["char", "integer"],
+};
+
+registry.category("fields").add("deploy_environment_shell", environmentShell);

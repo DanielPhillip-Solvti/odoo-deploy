@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="deploy_environment_list_view" model="ir.ui.view">
+        <field name="name">deploy.environment.list</field>
+        <field name="model">deploy.environment</field>
+        <field name="arch" type="xml">
+            <list string="Environments" multi_edit="0">
+                <field name="display_name" />
+                <field name="repository_branch" />
+                <field name="odoo_version" />
+                <field name="is_production" />
+                <field name="state" />
+                <field name="stale" decoration-warning="stale == True" />
+            </list>
+        </field>
+    </record>
+
+    <record id="deploy_environment_form_view" model="ir.ui.view">
+        <field name="name">deploy.environment.form</field>
+        <field name="model">deploy.environment</field>
+        <field name="arch" type="xml">
+            <form js_class="deploy_environment_form" class="o_deploy_env_form">
+                <header>
+                    <button
+                        name="%(deploy.action_deploy_module_wizard)d"
+                        type="action"
+                        string="Install Module"
+                        context="{'default_environment_id': id, 'default_action_type': 'install'}"
+                    />
+                    <button
+                        name="%(deploy.action_deploy_module_wizard)d"
+                        type="action"
+                        string="Update Module"
+                        context="{'default_environment_id': id, 'default_action_type': 'update'}"
+                    />
+                    <button
+                        name="action_undeploy"
+                        type="object"
+                        string="Undeploy"
+                        confirm="Are you sure you want to undeploy this branch?"
+                        class="btn-danger"
+                    />
+                    <button
+                        name="action_reset_branch"
+                        type="object"
+                        string="Reset Branch"
+                        confirm="Are you sure you want to reset this branch to origin?"
+                        class="btn-warning"
+                    />
+                    <button
+                        name="action_restore_backup"
+                        type="object"
+                        string="Restore Backup"
+                        confirm="Are you sure you want to restore this backup?"
+                        class="btn-warning"
+                    />
+                </header>
+                <sheet>
+                    <field name="agent_id" invisible="1" />
+                    <div class="d-flex align-items-center pb-2 mb-2 border-bottom">
+                        <h1 class="mb-0">
+                            <field name="display_name" />
+                        </h1>
+                        <div class="d-flex gap-3 ms-auto">
+                            <field name="odoo_version" widget="badge" decoration-info="True" />
+                            <field
+                                name="environment_type"
+                                widget="badge"
+                                decoration-success="environment_type == 'Production'"
+                                decoration-info="environment_type == 'Staging'"
+                            />
+                            <field
+                                name="stale"
+                                widget="badge"
+                                decoration-warning="stale == True"
+                                decoration-success="stale == False"
+                                string="Stale"
+                            />
+                            <field
+                                name="state"
+                                widget="badge"
+                                decoration-success="state == 'active'"
+                                decoration-danger="state in ('error', 'inactive')"
+                                decoration-warning="state not in ('active', 'error', 'inactive')"
+                            />
+                        </div>
+                    </div>
+                    <notebook class="o_deploy_env_notebook">
+                        <page string="History">
+                            <field name="id" widget="deploy_environment_history" nolabel="1" />
+                        </page>
+                        <page string="Logs">
+                            <field name="id" widget="deploy_environment_logs" nolabel="1" />
+                        </page>
+                        <page string="Shell">
+                            <field name="id" widget="deploy_environment_shell" nolabel="1" />
+                        </page>
+                        <page string="Events">
+                            <field name="event_ids" nolabel="1">
+                                <list>
+                                    <field name="timestamp" />
+                                    <field name="action" />
+                                    <field
+                                        name="status"
+                                        widget="badge"
+                                        decoration-success="status == 'success'"
+                                        decoration-danger="status == 'fail'"
+                                    />
+                                    <field name="message" string="" class="o_event_message" />
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

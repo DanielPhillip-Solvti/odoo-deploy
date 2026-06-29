@@ -18,7 +18,7 @@ import (
 type Handler struct {
 	OdooURL   string
 	APIKey    string
-	BinaryDir string
+	BackupDir string
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +49,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(h.BinaryDir, "backups", filename)
+	filePath := filepath.Join(h.BackupDir, filename)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		http.Error(w, "Backup file not found", http.StatusNotFound)
 		return

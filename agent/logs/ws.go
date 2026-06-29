@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"agent/helpers"
 	"agent/token"
@@ -80,29 +81,55 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	done := make(chan struct{})
+	lines := make(chan string, 100)
+	var wg sync.WaitGroup
 
-	go func() {
-		reader := bufio.NewReader(io.MultiReader(stdout, stderr))
+	pipeReader := func(pipe io.ReadCloser) {
+		defer wg.Done()
+		reader := bufio.NewReader(pipe)
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {
-				break
+				return
 			}
 			line = strings.TrimRight(line, "\n\r")
-			if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
-				break
-			}
+			lines <- line
 		}
+	}
+
+	wg.Add(2)
+	go pipeReader(stdout)
+	go pipeReader(stderr)
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(lines)
 		close(done)
 	}()
 
+	// Write lines concurrently — ensure at most one concurrent write
+	var mu sync.Mutex
+	writeLine := func(line string) {
+		mu.Lock()
+		defer mu.Unlock()
+		conn.WriteMessage(websocket.TextMessage, []byte(line))
+	}
+
+	doneWriting := make(chan struct{})
+	go func() {
+		for line := range lines {
+			writeLine(line)
+		}
+		close(doneWriting)
+	}()
+
 	select {
-	case <-done:
+	case <-doneWriting:
 	case <-r.Context().Done():
 		cmd.Process.Kill()
 	}
 
 	cmd.Wait()
-	conn.WriteMessage(websocket.TextMessage, []byte("DONE"))
+	writeLine("DONE")
 }

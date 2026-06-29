@@ -3,6 +3,9 @@ access_agent_user,access_agent_user,model_deploy_agent,base.group_user,1,0,0,0
 access_agent_admin,access_agent_admin,model_deploy_agent,base.group_system,1,1,1,1
 access_event_user,access_event_user,model_deploy_event,base.group_user,1,1,1,0
 access_event_admin,access_event_admin,model_deploy_event,base.group_system,1,1,1,1
+access_environment_user,access_environment_user,model_deploy_environment,base.group_user,1,0,0,0
+access_environment_admin,access_environment_admin,model_deploy_environment,base.group_system,1,1,1,1
 access_github_app_config_admin,access_github_app_config_admin,model_github_app_config,base.group_system,1,1,1,1
 access_ws_token_user,access_ws_token_user,model_deploy_ws_token,base.group_user,1,1,1,0
 access_ws_token_admin,access_ws_token_admin,model_deploy_ws_token,base.group_system,1,1,1,1
+access_module_wizard_admin,access_module_wizard_admin,model_deploy_module_wizard,base.group_system,1,1,1,1

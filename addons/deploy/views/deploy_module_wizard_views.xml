@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="deploy_module_wizard_form" model="ir.ui.view">
+        <field name="name">deploy.module.wizard.form</field>
+        <field name="model">deploy.module.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="environment_id" invisible="1" />
+                    <field name="module_name" string="Module Name" placeholder="e.g. sale,stock" />
+                    <field name="action_type" invisible="1" />
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Confirm" class="btn-primary" />
+                    <button special="cancel" string="Cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_deploy_module_wizard" model="ir.actions.act_window">
+        <field name="name">Module Operation</field>
+        <field name="res_model">deploy.module.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

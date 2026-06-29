@@ -1,11 +1,12 @@
 <odoo>
-    <record id="deploy_event_tree_view" model="ir.ui.view">
-        <field name="name">deploy.event.tree</field>
+    <record id="deploy_event_list_view" model="ir.ui.view">
+        <field name="name">deploy.event.list</field>
         <field name="model">deploy.event</field>
         <field name="arch" type="xml">
             <list string="Deployment Events">
                 <field name="timestamp" optional="show" />
                 <field name="agent_id" optional="show" />
+                <field name="environment_id" optional="show" />
                 <field name="action" optional="show" />
                 <field name="parameters" optional="show" />
                 <field name="status" widget="badge" decoration-success="status == 'success'" decoration-danger="status == 'fail'" />

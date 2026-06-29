@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="deploy.EnvironmentHistory">
+        <div class="o_deploy_env_history">
+            <t t-if="state.status === 'loading'">
+                <div class="d-flex align-items-center justify-content-center p-4">
+                    <i class="fa fa-spinner fa-spin fa-2x text-muted" />
+                </div>
+            </t>
+            <t t-elif="state.status === 'not_authenticated'">
+                <div class="alert alert-warning">GitHub App not authenticated. Configure it under Deploy > GitHub Configuration.</div>
+            </t>
+            <t t-elif="state.status === 'error'">
+                <div class="alert alert-danger">
+                    Failed to load commits:
+                    <t t-esc="state.errorMessage" />
+                </div>
+            </t>
+            <t t-elif="state.status === 'loaded'">
+                <div class="mb-2 d-flex gap-2 align-items-center">
+                    <t t-if="state.branch !== state.baseBranch">
+                        <span class="badge bg-info">
+                            <t t-esc="state.aheadBy" />
+                            ahead
+                        </span>
+                        <span class="badge bg-warning">
+                            <t t-esc="state.behindBy" />
+                            behind
+                        </span>
+                        <t t-if="state.mergeBaseCommit" class="text-muted small">
+                            merge base:
+                            <t t-esc="state.mergeBaseCommit.sha" />
+                        </t>
+                    </t>
+                    <span class="text-muted small">
+                        base:
+                        <t t-esc="state.baseBranch" />
+                    </span>
+                </div>
+                <table class="table table-sm o_deploy_commits_table">
+                    <thead class="text-muted">
+                        <tr>
+                            <th class="fw-normal">SHA</th>
+                            <th class="fw-normal">Message</th>
+                            <th class="fw-normal">Author</th>
+                            <th class="fw-normal">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.commits" t-as="commit" t-key="commit.sha">
+                            <td>
+                                <a t-attf-href="{{ commit.url }}" target="_blank" class="font-monospace small">
+                                    <t t-esc="commit.sha" />
+                                </a>
+                            </td>
+                            <td>
+                                <t t-esc="commit.message" />
+                            </td>
+                            <td>
+                                <t t-esc="commit.author" />
+                            </td>
+                            <td class="small">
+                                <t t-esc="commit.date" />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </t>
+            <t t-elif="state.status === 'no_record'">
+                <div class="alert alert-info">Select an environment to view history.</div>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="deploy.EnvironmentLogs">
+        <div class="o_deploy_logs">
+            <div class="btn-toolbar mb-2 gap-2">
+                <button class="btn btn-sm" t-att-class="state.streaming ? 'btn-secondary' : 'btn-primary'" t-on-click="toggleStream">
+                    <i t-attf-class="fa {{state.streaming ? 'fa-stop' : 'fa-play'}} me-1" />
+                    <t t-esc="state.streaming ? 'Stop' : 'Start'" />
+                    Streaming
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" t-on-click="toggleAutoScroll">
+                    <i t-attf-class="fa {{state.autoScroll ? 'fa-check-square-o' : 'fa-square-o'}} me-1" />
+                    Auto-scroll
+                </button>
+                <button class="btn btn-sm btn-outline-danger" t-on-click="clearLogs">
+                    <i class="fa fa-trash me-1" />
+                    Clear
+                </button>
+                <span t-if="state.connected" class="badge bg-success align-self-center">Connected</span>
+                <span t-else="" class="badge bg-secondary align-self-center">Disconnected</span>
+            </div>
+            <div
+                t-ref="logContainer"
+                class="o_deploy_log_container font-monospace p-2 border rounded bg-dark text-light"
+                style="overflow-y: auto; white-space: pre-wrap; font-size: 12px;"
+            >
+                <t t-foreach="state.lines" t-as="line" t-key="line_index">
+                    <t t-esc="line" />
+                    <br />
+                </t>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="deploy.EnvironmentShell">
+        <div class="o_deploy_shell d-flex flex-column">
+            <div class="btn-toolbar mb-2 gap-2">
+                <button class="btn btn-sm" t-att-class="isConnected ? 'btn-secondary' : 'btn-primary'" t-on-click="toggleConnection">
+                    <i t-attf-class="fa {{isConnected ? 'fa-stop' : 'fa-terminal'}} me-1" />
+                    <t t-esc="isConnected ? 'Disconnect' : 'Connect'" />
+                </button>
+            </div>
+            <div t-ref="termContainer" class="border rounded w-100" />
+        </div>
+    </t>
+
+    <t t-name="deploy.AgentBackups">
+        <div class="o_deploy_backups">
+            <div class="btn-toolbar mb-2 gap-2">
+                <button
+                    class="btn btn-sm btn-primary"
+                    t-on-click="() => this.triggerBackup(false)"
+                    t-att-disabled="state.backingUp ? 'disabled' : undefined"
+                >
+                    <i class="fa fa-database me-1" />
+                    Backup (no dump)
+                </button>
+                <button
+                    class="btn btn-sm btn-primary"
+                    t-on-click="() => this.triggerBackup(true)"
+                    t-att-disabled="state.backingUp ? 'disabled' : undefined"
+                >
+                    <i class="fa fa-database me-1" />
+                    Backup with dump
+                </button>
+            </div>
+            <table class="table table-sm" t-if="backups.length">
+                <thead class="text-muted">
+                    <tr>
+                        <th class="fw-normal">Backup File</th>
+                        <th class="fw-normal text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="backups" t-as="backup" t-key="backup">
+                        <td>
+                            <t t-esc="backup" />
+                        </td>
+                        <td class="text-end">
+                            <button
+                                class="btn btn-sm btn-outline-primary"
+                                t-on-click="() => this.downloadBackup(backup)"
+                                t-att-disabled="state.downloading ? 'disabled' : undefined"
+                            >
+                                <i class="fa fa-download me-1" />
+                                Download
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <p t-else="" class="text-muted mb-0">No backups available.</p>
+        </div>
+    </t>
+
+    <t t-name="deploy.AgentBranches">
+        <div class="o_deploy_branches">
+            <t t-if="state.loading">
+                <div class="d-flex align-items-center justify-content-center p-4">
+                    <i class="fa fa-spinner fa-spin fa-2x text-muted" />
+                </div>
+            </t>
+            <t t-else="">
+                <table class="table table-sm" t-if="state.branches.length">
+                    <thead class="text-muted">
+                        <tr>
+                            <th class="fw-normal">Branch</th>
+                            <th class="fw-normal text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.branches" t-as="branch" t-key="branch">
+                            <td>
+                                <t t-esc="branch" />
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button
+                                        class="btn btn-outline-success"
+                                        t-on-click="() => this.deployBranch(branch, false)"
+                                        t-att-disabled="state.deploying[branch] ? 'disabled' : undefined"
+                                    >
+                                        <t t-if="state.deploying[branch]">
+                                            <i class="fa fa-spinner fa-spin me-1" />
+                                        </t>
+                                        Deploy Staging
+                                    </button>
+                                    <button
+                                        class="btn btn-outline-warning"
+                                        t-on-click="() => this.deployBranch(branch, true)"
+                                        t-att-disabled="state.deploying[branch] ? 'disabled' : undefined"
+                                    >
+                                        Deploy Production
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p t-else="" class="text-muted mb-0">No undeployed branches found.</p>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="deploy.AgentEnvironments">
+        <div class="o_deploy_agent_envs">
+            <t t-if="state.loading">
+                <div class="d-flex align-items-center justify-content-center p-4">
+                    <i class="fa fa-spinner fa-spin fa-2x text-muted" />
+                </div>
+            </t>
+            <t t-else="">
+                <table class="table table-sm" t-if="state.environments.length">
+                    <thead class="text-muted">
+                        <tr>
+                            <th class="fw-normal">Branch</th>
+                            <th class="fw-normal">Version</th>
+                            <th class="fw-normal">Type</th>
+                            <th class="fw-normal">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            t-foreach="state.environments"
+                            t-as="env"
+                            t-key="env.id"
+                            class="o_deploy_env_row"
+                            t-on-click="() => this.openEnvironment(env.id)"
+                        >
+                            <td>
+                                <t t-esc="env.repository_branch" />
+                            </td>
+                            <td>
+                                <span class="badge bg-info">
+                                    <t t-esc="env.odoo_version" />
+                                </span>
+                            </td>
+                            <td>
+                                <span t-att-class="'badge ' + (env.is_production ? 'bg-success' : 'bg-primary')">
+                                    <t t-esc="env.is_production ? 'Production' : 'Staging'" />
+                                </span>
+                            </td>
+                            <td>
+                                <span
+                                    t-att-class="'badge ' + (env.state == 'active' ? 'bg-success' : env.state in ('error', 'inactive') ? 'bg-danger' : 'bg-warning')"
+                                >
+                                    <t t-esc="env.state || 'unknown'" />
+                                </span>
+                                <span t-if="env.stale" class="badge bg-warning ms-1">Stale</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p t-else="" class="text-muted mb-0">No environments found.</p>
+            </t>
+        </div>
+    </t>
+</templates>

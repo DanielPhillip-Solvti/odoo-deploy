@@ -1,19 +1,49 @@
-/* Standard layout variables. No forced hex-colors to maintain full light/dark responsiveness */
-.deploy-action-card {
-    transition: all 0.2s ease-in-out;
-    cursor: pointer;
+.o_field_deploy_environment_logs,
+.o_field_deploy_environment_shell,
+.o_field_deploy_environment_history,
+.o_field_deploy_agent_branches,
+.o_field_deploy_agent_backups {
+    width: 100% !important;
+    flex: 1 1 100%;
+}
 
-    &:hover {
-        transform: translateY(-2px);
+.o_deploy_env_row {
+    cursor: pointer;
+}
+.o_deploy_env_row:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.o_deploy_shell {
+    height: 700px;
+    overflow: hidden;
+    .border.rounded {
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+    .xterm {
+        height: 100% !important;
+        .xterm-scrollable-element {
+            height: 100% !important;
+        }
+    }
+    .xterm-viewport {
+        display: none;
     }
 }
 
+.o_deploy_env_notebook {
+    min-height: 800px;
+}
+
+.o_deploy_log_container {
+    height: 700px;
+}
+
 .log-console-panel {
-    /* Safe container boundaries for code/log output boxes */
     height: 380px;
     overflow-y: auto;
 
-    /* Scale child field components to fill container dynamically */
     textarea,
     .o_field_text {
         height: 100% !important;

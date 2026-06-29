@@ -21,13 +21,24 @@ class AgentService:
         if action not in ACTION_KEYS:
             raise ValueError(f"Invalid action: {action}")
 
-        return self.agent.env["deploy.event"].create(
-            {
-                "agent_id": self.agent.id,
-                "action": action,
-                "parameters": parameters or {},
-            }
-        )
+        params = parameters or {}
+        event_vals = {
+            "agent_id": self.agent.id,
+            "action": action,
+            "parameters": params,
+        }
+        branch = params.get("branch")
+        if branch:
+            env = self.agent.env["deploy.environment"].search(
+                [
+                    ("agent_id", "=", self.agent.id),
+                    ("repository_branch", "=", branch),
+                ],
+                limit=1,
+            )
+            if env:
+                event_vals["environment_id"] = env.id
+        return self.agent.env["deploy.event"].create(event_vals)
 
     def deploy(self, branch, is_production, addons_repository=None, odoo_version=None):
         params = {"branch": branch, "is_production": is_production}

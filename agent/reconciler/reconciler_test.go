@@ -108,7 +108,7 @@ func TestScanBackups(t *testing.T) {
 		}
 	}
 
-	backups := ScanBackups(tmpDir)
+	backups := ScanBackups(backupsDir)
 	if len(backups) != 3 {
 		t.Fatalf("expected 3 backup files, got %d: %v", len(backups), backups)
 	}

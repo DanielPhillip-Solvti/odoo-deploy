@@ -11,4 +11,5 @@
     "installable": True,
     "application": False,
     "auto_install": False,
+    "reusable": False,
 }

@@ -69,6 +69,11 @@ func main() {
 
 	binaryDir := filepath.Dir(os.Args[0])
 
+	backupDir := os.Getenv("BACKUP_DIR")
+	if backupDir == "" {
+		backupDir = "/data/deploy-agent/backups"
+	}
+
 	wsPort := os.Getenv("WS_PORT")
 	if wsPort == "" {
 		wsPort = "9876"
@@ -87,7 +92,7 @@ func main() {
 	mux.Handle("/backup-ws", &backup.Handler{
 		OdooURL:   odooURL,
 		APIKey:    apiKey,
-		BinaryDir: binaryDir,
+		BackupDir: backupDir,
 	})
 	mux.Handle("/logs-ws", &logs.Handler{
 		OdooURL: odooURL,
@@ -111,7 +116,7 @@ func main() {
 	}()
 
 	// Goroutine 2: State reconciler — inspects Docker + backups every 15s
-	go reconciler.Run(ctx, agentState, binaryDir)
+	go reconciler.Run(ctx, agentState, backupDir)
 
 	// Goroutine 3: Heartbeat sender — health check every 30s
 	go heartbeat.Sender(ctx, agentState, odooURL, apiKey)

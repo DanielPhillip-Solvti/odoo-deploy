@@ -1,14 +1,14 @@
 /** @odoo-module **/
 
 import {Component, useState} from "@odoo/owl";
-import {useService} from "@web/core/utils/hooks";
+import {registry} from "@web/core/registry";
 import {rpc} from "@web/core/network/rpc";
+import {standardFieldProps} from "@web/views/fields/standard_field_props";
+import {useService} from "@web/core/utils/hooks";
 
-export class BackupsTab extends Component {
-    static template = "deploy.BackupsTab";
-    static props = {
-        agent: {type: Object, optional: true},
-    };
+export class AgentBackups extends Component {
+    static template = "deploy.AgentBackups";
+    static props = {...standardFieldProps};
 
     setup() {
         this.orm = useService("orm");
@@ -19,15 +19,8 @@ export class BackupsTab extends Component {
             backingUp: false,
         });
 
-        this.selectBackup = (filename) => {
-            this.state.selected = filename;
-        };
-
-        this.downloadSelected = async () => {
-            const filename = this.state.selected;
-            if (!filename) return;
-
-            const agentId = this.props.agent?.id;
+        this.downloadBackup = async (filename) => {
+            const agentId = this.props && this.props.record && this.props.record.resId;
             if (!agentId) return;
 
             this.state.downloading = true;
@@ -44,7 +37,7 @@ export class BackupsTab extends Component {
                     return;
                 }
 
-                const wsUrl = result.ws_url || `ws://localhost:9876/backup-ws`;
+                const wsUrl = result.ws_url || "ws://localhost:9876/backup-ws";
                 const ws = new WebSocket(`${wsUrl}?token=${result.token}`);
                 const chunks = [];
 
@@ -78,7 +71,7 @@ export class BackupsTab extends Component {
         };
 
         this.triggerBackup = async (withDump) => {
-            const agentId = this.props.agent?.id;
+            const agentId = this.props && this.props.record && this.props.record.resId;
             if (!agentId || this.state.backingUp) return;
             this.state.backingUp = true;
             try {
@@ -93,11 +86,18 @@ export class BackupsTab extends Component {
     }
 
     get backups() {
-        if (!this.props.agent?.heartbeat_payload) return [];
-        const payload =
-            typeof this.props.agent.heartbeat_payload === "string"
-                ? JSON.parse(this.props.agent.heartbeat_payload)
-                : this.props.agent.heartbeat_payload;
-        return payload.backups || [];
+        const data = this.props && this.props.record && this.props.record.data;
+        const payload = data && data.heartbeat_payload;
+        if (!payload) return [];
+        const raw = typeof payload === "string" ? JSON.parse(payload) : payload;
+        return raw.backups || [];
     }
 }
+
+export const agentBackups = {
+    component: AgentBackups,
+    displayName: "Agent Backups",
+    supportedTypes: ["char", "integer"],
+};
+
+registry.category("fields").add("deploy_agent_backups", agentBackups);

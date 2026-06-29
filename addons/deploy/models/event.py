@@ -12,6 +12,8 @@ class AgentEvent(models.Model):
     _description = "Agent Event"
 
     agent_id = fields.Many2one("deploy.agent", required=True)
+    environment_id = fields.Many2one("deploy.environment", string="Environment")
+
     action = fields.Selection(selection=ACTIONS, required=True)
 
     timestamp = fields.Datetime(default=fields.Datetime.now, required=True)

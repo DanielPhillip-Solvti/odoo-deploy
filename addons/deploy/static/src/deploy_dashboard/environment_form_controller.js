@@ -1,27 +1,25 @@
 /** @odoo-module **/
 
-import {onWillDestroy, onWillStart} from "@odoo/owl";
+import {onMounted, onWillDestroy} from "@odoo/owl";
 import {FormController} from "@web/views/form/form_controller";
 import {formView} from "@web/views/form/form_view";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 
-export class DeployAgentFormController extends FormController {
+export class DeployEnvironmentFormController extends FormController {
     setup() {
         super.setup();
         this.busService = useService("bus_service");
         this.notification = useService("notification");
+        this.orm = useService("orm");
 
-        onWillStart(() => {
-            const resId = this.props.resId;
-            if (resId) {
-                this._busChannel = `deploy_agent_${resId}`;
-                this.busService.addChannel(this._busChannel);
-                this._heartbeatHandler = (payload) => this._onHeartbeat(payload);
-                this.busService.subscribe("deploy.heartbeat", this._heartbeatHandler);
-                this._callbackHandler = (payload) => this._onEventCallback(payload);
-                this.busService.subscribe("deploy.event_callback", this._callbackHandler);
-                this.busService.start();
+        onMounted(async () => {
+            const record = this.model && this.model.root;
+            if (!record || !record.data) return;
+            const agentField = record.data.agent_id;
+            const agentId = Array.isArray(agentField) ? agentField[0] : agentField;
+            if (agentId) {
+                await this._initBus(agentId);
             }
         });
 
@@ -38,6 +36,17 @@ export class DeployAgentFormController extends FormController {
         });
     }
 
+    async _initBus(agentId) {
+        if (!agentId) return;
+        this._busChannel = `deploy_agent_${agentId}`;
+        this.busService.addChannel(this._busChannel);
+        this._heartbeatHandler = (payload) => this._onHeartbeat(payload);
+        this.busService.subscribe("deploy.heartbeat", this._heartbeatHandler);
+        this._callbackHandler = (payload) => this._onEventCallback(payload);
+        this.busService.subscribe("deploy.event_callback", this._callbackHandler);
+        this.busService.start();
+    }
+
     async _onHeartbeat() {
         await this.model.root.load();
     }
@@ -52,9 +61,9 @@ export class DeployAgentFormController extends FormController {
     }
 }
 
-export const deployAgentFormView = {
+export const deployEnvironmentFormView = {
     ...formView,
-    Controller: DeployAgentFormController,
+    Controller: DeployEnvironmentFormController,
 };
 
-registry.category("views").add("deploy_agent_form", deployAgentFormView);
+registry.category("views").add("deploy_environment_form", deployEnvironmentFormView);

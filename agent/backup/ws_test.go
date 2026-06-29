@@ -95,7 +95,7 @@ func TestDownloadBackup(t *testing.T) {
 	handler := &Handler{
 		OdooURL:   mock.URL(),
 		APIKey:    "test-api-key",
-		BinaryDir: tmpDir,
+		BackupDir: backupsDir,
 	}
 
 	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -161,7 +161,7 @@ func TestDownloadBackupInvalidToken(t *testing.T) {
 	handler := &Handler{
 		OdooURL:   mock.URL(),
 		APIKey:    "test-api-key",
-		BinaryDir: tmpDir,
+		BackupDir: backupsDir,
 	}
 
 	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -193,7 +193,7 @@ func TestDownloadBackupMissingFile(t *testing.T) {
 	handler := &Handler{
 		OdooURL:   mock.URL(),
 		APIKey:    "test-api-key",
-		BinaryDir: tmpDir,
+		BackupDir: filepath.Join(tmpDir, "backups"),
 	}
 
 	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +227,7 @@ func TestDownloadBackupPathTraversal(t *testing.T) {
 	handler := &Handler{
 		OdooURL:   mock.URL(),
 		APIKey:    "test-api-key",
-		BinaryDir: tmpDir,
+		BackupDir: filepath.Join(tmpDir, "backups"),
 	}
 
 	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -250,7 +250,7 @@ func TestDownloadBackupMissingToken(t *testing.T) {
 	handler := &Handler{
 		OdooURL:   mock.URL(),
 		APIKey:    "test-api-key",
-		BinaryDir: tmpDir,
+		BackupDir: filepath.Join(tmpDir, "backups"),
 	}
 
 	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

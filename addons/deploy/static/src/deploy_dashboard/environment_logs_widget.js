@@ -1,33 +1,36 @@
 /** @odoo-module **/
 
-import {Component, onPatched, onWillDestroy, useRef, useState} from "@odoo/owl";
-import {useService} from "@web/core/utils/hooks";
+import {Component, onPatched, onWillDestroy, onWillStart, useRef, useState} from "@odoo/owl";
+import {registry} from "@web/core/registry";
 import {rpc} from "@web/core/network/rpc";
+import {standardFieldProps} from "@web/views/fields/standard_field_props";
+import {useService} from "@web/core/utils/hooks";
 
-export class LogsTab extends Component {
-    static template = "deploy.LogsTab";
-    static props = {
-        env: {type: Object},
-        agent: {type: Object, optional: true},
-    };
+export class EnvironmentLogs extends Component {
+    static template = "deploy.EnvironmentLogs";
+    static props = {...standardFieldProps};
 
     setup() {
         this.notification = useService("notification");
+        this.orm = useService("orm");
         this.logContainer = useRef("logContainer");
         this.state = useState({
             lines: [],
             connected: false,
             streaming: false,
             autoScroll: true,
+            agentId: null,
+            wsUrl: "",
+            branchName: "",
         });
         this._ws = null;
 
-        this.toggleStream = async () => {
+        this.toggleStream = () => {
             if (this.state.streaming) {
                 this._disconnect();
-                return;
+            } else {
+                this._connect();
             }
-            await this._connect();
         };
 
         this.toggleAutoScroll = () => {
@@ -38,6 +41,10 @@ export class LogsTab extends Component {
             this.state.lines = [];
         };
 
+        onWillStart(async () => {
+            await this._loadMeta();
+        });
+
         onWillDestroy(() => this._disconnect());
 
         onPatched(() => {
@@ -47,25 +54,29 @@ export class LogsTab extends Component {
         });
     }
 
-    get branch() {
-        return this.props.env?.repository_branch;
-    }
-
-    get wsBaseUrl() {
-        const agent = this.props.agent;
-        if (agent?.ws_url) {
-            const base = agent.ws_url.replace(/\/backup-ws.*$/, "");
-            return base || "ws://localhost:9876";
+    async _loadMeta() {
+        const envId = this.props.record.resId;
+        if (!envId) return;
+        try {
+            const [env] = await this.orm.read("deploy.environment", [envId], ["agent_id", "repository_branch"]);
+            const agentId = Array.isArray(env.agent_id) ? env.agent_id[0] : env.agent_id;
+            this.state.branchName = env.repository_branch;
+            if (!agentId) return;
+            const [agent] = await this.orm.read("deploy.agent", [agentId], ["ws_url"]);
+            this.state.agentId = agentId;
+            this.state.wsUrl = agent.ws_url || "ws://localhost:9876";
+        } catch (e) {
+            // Silent
         }
-        return "ws://localhost:9876";
     }
 
     async _connect() {
-        const branch = this.branch;
-        const agentId = this.props.agent?.id;
+        const branch = this.state.branchName;
+        const agentId = this.state.agentId;
         if (!branch || !agentId) return;
 
         this.state.streaming = true;
+        this.state.connected = false;
         this.state.lines = [];
         try {
             const result = await rpc("/agent/ws/token", {
@@ -127,3 +138,11 @@ export class LogsTab extends Component {
         this.state.streaming = false;
     }
 }
+
+export const environmentLogs = {
+    component: EnvironmentLogs,
+    displayName: "Environment Logs",
+    supportedTypes: ["char", "integer"],
+};
+
+registry.category("fields").add("deploy_environment_logs", environmentLogs);

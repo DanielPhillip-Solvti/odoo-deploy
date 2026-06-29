@@ -8,7 +8,7 @@ HOST_IP := $(shell ip -4 route get 1 | grep -oP 'src \K\S+' 2>/dev/null || hostn
 
 write-debug-env:
 	@echo "ODOO_URL=http://localhost:8169" > ./build/.env
-	@echo "API_KEY=generated_api_key1" >> ./build/.env
+	@echo "API_KEY=FKHaKI0ElH1bewaawRY9ZjWwwCgnpy_lXJJVLphUbwg" >> ./build/.env
 	@echo "REPO_URL=https://github.com/DanielPhillip-Solvti/odoo-deploy" >> ./build/.env
 	@echo "HEARTBEAT_FILE=${PWD}/build/heartbeat.json" >> ./build/.env
 	@echo "WS_PORT=9876" >> ./build/.env
